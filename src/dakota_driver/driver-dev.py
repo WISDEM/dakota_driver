@@ -33,8 +33,7 @@ class DakotaBase(Driver):
     section.
     """
 
-    implements(IOptimizer)
-    implements(IHasParameters, IHasObjectives)
+    implements(IHasParameters, IHasObjectives,IOptimizer)
 
     output = Enum('normal', iotype='in', desc='Output verbosity',
                   values=('silent', 'quiet', 'normal', 'verbose', 'debug'))
@@ -209,7 +208,7 @@ class DakotaBase(Driver):
 ###########################################################
 
     def DakotaCONMIN(self):
-    """ CONMIN optimizer using DAKOTA.  """
+        """ CONMIN optimizer using DAKOTA.  """
                                         
         implements(IHasIneqConstraints)
     
