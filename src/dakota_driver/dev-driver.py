@@ -333,6 +333,10 @@ class pydakdriver(DakotaBase):
         if opt_type == 'npsol_sqp':
             self.input.method[opt_type] = ""
             self.input.method['convergence_tolerance'] = -1  
+        if opt_type == 'efficient_global':
+            self.input.method["efficiency_global"] = ""
+            self.input.method["seed"] = "-1"
+            self.seed = 10983
 
     def Parameter_Study(self,study_type = 'vector'):
         if study_type == 'vector':
