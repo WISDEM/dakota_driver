@@ -8,6 +8,7 @@ DAKOTA results.
 """
 
 from numpy import array
+import collections
 
 from dakota import DakotaInput, run_dakota
 
@@ -22,6 +23,8 @@ from openmdao.util.decorators import add_delegate
 
 __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
+
+_NOT_SET = "SPECIFICATION DECLARED BUT NOT DEFINED"
 
 
 @add_delegate(HasParameters, HasObjectives)
@@ -64,47 +67,6 @@ class DakotaBase(Driver):
         objectives = self.get_objectives()
         if not objectives:
             self.raise_exception('No objectives, run aborted', ValueError)
-
-    def configure_input(self):
-        """ Configures input specification, must be overridden. """
-        self.raise_exception('configure_input', NotImplementedError)
-
-    def execute(self):
-        """ Write DAKOTA input and run. """
-        self.configure_input()
-        self.run_dakota()
-
-    def set_variables(self, need_start, uniform=False, need_bounds=True):
-        """ Set :class:`DakotaInput` ``variables`` section. """
-        parameters = self.get_parameters()
-
-        if uniform:
-            self.input.variables = [
-                'uniform_uncertain = %s' % self.total_parameters()]
-        else:
-            self.input.variables = [
-                'continuous_design = %s' % self.total_parameters()]
-
-        if need_start:
-            initial = [str(val) for val in self.eval_parameters(dtype=None)]
-            self.input.variables.append(
-                '  initial_point %s' % ' '.join(initial))
-
-        if need_bounds:
-            lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
-            ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
-            self.input.variables.extend([
-                '  lower_bounds %s' % ' '.join(lbounds),
-                '  upper_bounds %s' % ' '.join(ubounds)])
-
-        names = []
-        for param in parameters.values():
-            for name in param.names:
-                names.append('%r' % name)
-
-        self.input.variables.append(
-            '  descriptors  %s' % ' '.join(names)
-        )
 
     def run_dakota(self):
         """
@@ -205,12 +167,214 @@ class DakotaBase(Driver):
         return retval
 
 
+    def configure_input(self):
+        """ Configures input specification, must be overridden. """
+
+        ######## 
+       # method #
+        ######## 
+        n_params = self.total_parameters()
+        if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
+        for key in self.input.method:
+            if key == 'output': self.input.method[key] = self.output
+            if key == 'max_iterations': self.input.method[key] = self.max_iterations
+            if key == 'max_function_evaluations': self.input.method[key] = self.max_function_evaluations
+            if key == 'convergence_tolerance': self.input.method[key] = self.convergence_tolerance
+            if key == 'constraint_tolerance': 
+               if ineq_constraints: self.input.method[key] = self.constraint_tolerance
+               else: self.input.method.pop(key) 
+
+            # optimization
+            if key == 'conmin':
+                self.set_variables(need_start=True)
+                if ineq_constraints: self.input.method['conmin_mfd'] = ''
+                else: self.input.method['conmin_frcg'] = ''
+                self.input.method.pop(key)
+            if key == 'npsol_sqp': self.set_variables(True,need_bounds=True)
+            if key == 'sampling': self.set_variables(need_start=False, uniform=True)
+            
+            # Paramter studies
+            if key == 'multidim_parameter_study': self.set_variables(need_start=False)
+            if key == 'vector_parameter_study': self.set_variables(need_start=True, need_bounds=False)
+            # why is this false? if key == 'vector_parameter_study': self.set_variables(need_start=False, need_bounds=False)
+
+            if key == 'partitions':
+                if len(self.partitions) != self.total_parameters():
+                    self.raise_exception('#partitions (%s) != #parameters (%s)'
+                                 % (len(self.partitions), self.total_parameters()),
+                                 ValueError)
+                partitions = [str(partition) for partition in self.partitions]
+                self.input.method[key] = ' '.join(partitions)
+
+            if key == 'vector_parameter_study':
+                if len(self.final_point) != n_params:
+                    self.raise_exception('#final_point (%s) != #parameters (%s)'
+                                 % (len(self.final_point), n_params),
+                                 ValueError)
+                final_point = [str(point) for point in self.final_point]
+            if key == 'final_point': self.input.method[key] = ' '.join(final_point)
+            if key == 'num_steps': self.input.method[key] = self.num_steps
+
+            if key == 'sample_type': self.input.method[key] = self.sample_type
+            if key == 'seed': self.input.method[key] = self.seed
+            if key == 'samples': self.input.method[key] = self.samples
+
+        ########### 
+       # responses #
+        ########### 
+        objectives = self.get_objectives()
+        for key in self.input.responses:
+            if key =='objective_functions': self.input.responses[key] = len(objectives)
+            if key == 'nonlinear_inequality_constraints' :
+               if ineq_constraints: self.input.responses[key] = ineq_constraints
+               else: self.input.responses.pop(key)
+            if key == 'interval_type': self.input.responses[key] = self.interval_type
+            if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
+
+            if key == 'num_response_functions': self.input.responses[key] = len(objectives)
+            if key == 'response_descriptors': 
+                names = ['%r' % name for name in objectives.keys()]
+                self.input.responses[key] = ' '.join(names)
+
+        ##################################################
+       # Verify that all input fields have been adressed #
+        ##################################################
+        def assignment_enforcemer(tag,val):
+             if val == _NOT_SET: raise ValueError(str(tag)+ " NOT DEFINED")
+        for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
+        for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
+
+        #############################################################
+       # map method and response from ordered dictionaries to lists  #
+       #                                                             #
+       # convention is if the value is an empty string there will be #
+       #    no equals sign. Otherwise, data will be inoyt to dakota  #
+       #    as "{key} = {associated value}"                          #
+        #############################################################
+        temp_list = []
+        for key in self.input.method:
+            if self.input.method[key]:
+                temp_list.append(str(key) + ' = '+str(self.input.method[key]))
+            else: temp_list.append(key)
+        self.input.method = temp_list
+
+        temp_list = []
+        for key in self.input.responses:
+            if self.input.responses[key]:
+                temp_list.append(str(key) + ' = '+str(self.input.responses[key]))
+            else: temp_list.append(key)
+        self.input.responses = temp_list
+
+    def execute(self):
+        """ Write DAKOTA input and run. """
+        self.configure_input()
+        self.run_dakota()
+
+    def set_variables(self, need_start, uniform=False, need_bounds=True):
+        """ Set :class:`DakotaInput` ``variables`` section. """
+
+        parameters = self.get_parameters()
+        if uniform:
+            self.input.variables = [
+                'uniform_uncertain = %s' % self.total_parameters()]
+        else:
+            self.input.variables = [
+                'continuous_design = %s' % self.total_parameters()]
+
+        if need_start:
+            initial = [str(val) for val in self.eval_parameters(dtype=None)]
+            self.input.variables.append(
+                '  initial_point %s' % ' '.join(initial))
+
+        if need_bounds:
+            lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
+            ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
+            self.input.variables.extend([
+                '  lower_bounds %s' % ' '.join(lbounds),
+                '  upper_bounds %s' % ' '.join(ubounds)])
+
+        names = []
+        for param in parameters.values():
+            for name in param.names:
+                names.append('%r' % name)
+
+        self.input.variables.append(
+            '  descriptors  %s' % ' '.join(names)
+        )
+
+
 class DakotaOptimizer(DakotaBase):
     """ Base class for optimizers using the DAKOTA Python interface. """
     # Currently only a 'marker' class.
 
     implements(IOptimizer)
 
+################################################################################
+########################## Hierarchical Driver ################################
+class pydakdriver(DakotaBase):
+
+    def __init__(self):
+        super(pydakdriver, self).__init__()
+        self.input.method = collections.OrderedDict()
+        self.input.responses = collections.OrderedDict()
+ 
+    def print_instructions():
+        print 'Dakota OpenmDAO Driver\n  Parameter Study(type):\n    options for type are\
+              \n      vector, multi-dim, list, or centered'
+
+    def analytical_gradients(self,interval_type='formed',fd_grad_step_size='1.e-4'):
+         for key in self.input.responses:
+             if key == 'no_gradients':
+                  self.input.responses.pop(key)
+         self.input.responses['numerical_gradients'] = ''
+         self.input.responses['method_source dakota'] = ''
+         self.input.responses['interval_type '+interval_type] = ''
+         self.fd_gradient_step_size = fd_grad_step_size
+         self.input.responses['fd_gradient_step_size'] = _NOT_SET
+
+    def hessians(self):
+         for key in self.input.responses:
+             if key == 'no_hessians':
+                  self.input.responses.pop(key)
+         # todo: Create Hessian default with options
+
+    def Optimization(self,opt_type='npsol_sqp',conv_tolerance = '1.e-8'):
+        self.convergence_tolerance = conv_tolerance
+        self.input.responses['objective_functions']=_NOT_SET
+        self.input.responses['no_gradients'] = ''
+        self.input.responses['no_hessians'] = ''
+        if opt_type == 'npsol_sqp':
+            self.input.method[opt_type] = ""
+            self.input.method['convergence_tolerance'] = _NOT_SET 
+        if opt_type == 'efficient_global':
+            self.input.method["efficiency_global"] = ""
+            self.input.method["seed"] = _NOT_SET
+            self.seed = 10983
+#        if opt_type == 'conmin':
+            
+
+    def Parameter_Study(self,study_type = 'vector'):
+        if study_type == 'vector':
+            self.input.method['vector_parameter_study'] = ""
+            self.input.method['final_point'] = _NOT_SET 
+            self.input.method['num_steps'] = _NOT_SET 
+        if study_type == 'multi-dim':
+            self.input.method['multidim_parameter_study'] = ""
+            self.input.method['partitions'] = _NOT_SET 
+        if study_type == 'list':   
+            self.input.method['list_parameter_study'] = "" # todo
+            self.input.method['list_of_points'] = _NOT_SET  # todo
+            self.input.responses['response_functions']=_NOT_SET  # todo: add responsens_not_objectives()
+        else: self.input.responses['objective_functions']=_NOT_SET 
+        if study_type == 'centered':
+            self.input.method['centered_parameter_study'] = ""
+            self.input.method['step_vector'] = _NOT_SET  # todo
+            self.input.method['steps_per_variable'] = _NOT_SET  # todo
+        self.input.responses['no_gradients']=''
+        self.input.responses['no_hessians']=''
+            
+################################################################################
+################################################################################
 
 @add_delegate(HasIneqConstraints)
 class DakotaCONMIN(DakotaOptimizer):
@@ -236,38 +400,24 @@ class DakotaCONMIN(DakotaOptimizer):
         # DakotaOptimizer leaves _max_objectives at 0 (unlimited).
         self._hasobjectives._max_objectives = 1
 
-    def configure_input(self):
         """ Configures input specification. """
-        objectives = self.get_objectives()
-        ineq_constraints = self.total_ineq_constraints()
 
-        method = 'conmin_mfd' if ineq_constraints else 'conmin_frcg'
-        self.input.method = [
-            '%s' % method,
-            '  output = %s' % self.output,
-            '  max_iterations = %s' % self.max_iterations,
-            '  max_function_evaluations = %s' % self.max_function_evaluations,
-            '  convergence_tolerance = %s' % self.convergence_tolerance]
-        if ineq_constraints:
-            self.input.method.append(
-                '  constraint_tolerance = %s' % self.constraint_tolerance)
+        self.input.method = collections.OrderedDict()
+        self.input.method["conmin"] = ''
+        self.input.method["output"] = ''
+        self.input.method["max_iterations"] = -1
+        self.input.method["max_function_evaluations"] = -1
+        self.input.method["convergence_tolerance"] = -1
+        self.input.method["constraint_tolerance"] = -1
 
-        self.set_variables(need_start=True)
-
-        self.input.responses = [
-            'objective_functions = %s' % len(objectives)]
-
-        if ineq_constraints:
-            self.input.responses.append(
-                'nonlinear_inequality_constraints = %s' % ineq_constraints)
-
-        self.input.responses.extend([
-            'numerical_gradients',
-            '  method_source dakota',
-            '  interval_type %s' % self.interval_type,
-            '  fd_gradient_step_size = %s' % self.fd_gradient_step_size,
-            '  no_hessians',
-        ])
+        self.input.responses = collections.OrderedDict()
+        self.input.responses['objective_functions'] = -1
+        self.input.responses['nonlinear_inequality_constraints'] = -1
+        self.input.responses['numerical_gradients'] = ''
+        self.input.responses['method_source dakota'] = ''
+        self.input.responses['interval_type'] = 'default'
+        self.input.responses['fd_gradient_step_size'] = 'default'
+        self.input.responses['no_hessians'] = ''
 
 
 class DakotaMultidimStudy(DakotaBase):
@@ -276,28 +426,20 @@ class DakotaMultidimStudy(DakotaBase):
     partitions = List(Int, low=1, iotype='in',
                       desc='List giving # of partitions for each parameter')
 
-    def configure_input(self):
-        """ Configures input specification. """
-        if len(self.partitions) != self.total_parameters():
-            self.raise_exception('#partitions (%s) != #parameters (%s)'
-                                 % (len(self.partitions), self.total_parameters()),
-                                 ValueError)
+    """ Configures input specification. """
 
-        partitions = [str(partition) for partition in self.partitions]
-        objectives = self.get_objectives()
+    def __init__(self):
+        super(DakotaMultidimStudy, self).__init__()
 
-        self.input.method = [
-            'multidim_parameter_study',
-            '  output = %s' % self.output,
-            '  partitions = %s' % ' '.join(partitions)]
+        self.input.method = collections.OrderedDict()
+        self.input.method['multidim_parameter_study'] = ''
+        self.input.method['output'] = 'default'
+        self.input.method['partitions'] = 'default'
 
-        self.set_variables(need_start=False)
-
-        self.input.responses = [
-            'objective_functions = %s' % len(objectives),
-            'no_gradients',
-            'no_hessians']
-
+        self.input.responses = collections.OrderedDict()
+        self.input.responses['objective_functions'] = 'default'
+        self.input.responses['no_gradients'] = ''
+        self.input.responses['no_hessians'] = ''
 
 class DakotaVectorStudy(DakotaBase):
     """ Vector parameter study using DAKOTA. """
@@ -315,29 +457,18 @@ class DakotaVectorStudy(DakotaBase):
                 delegate._allowed_types.append('unbounded')
                 break
 
-    def configure_input(self):
         """ Configures the input specification. """
-        n_params = self.total_parameters()
-        if len(self.final_point) != n_params:
-            self.raise_exception('#final_point (%s) != #parameters (%s)'
-                                 % (len(self.final_point), n_params),
-                                 ValueError)
 
-        final_point = [str(point) for point in self.final_point]
-        objectives = self.get_objectives()
+        self.input.method = collections.OrderedDict()
+        self.input.method['output'] = 'default'
+        self.input.method['vector_parameter_study'] = ""
+        self.input.method['final_point'] = 'default'
+        self.input.method['num_steps'] = 'default'
 
-        self.input.method = [
-            'output = %s' % self.output,
-            'vector_parameter_study',
-            '  final_point = %s' % ' '.join(final_point),
-            '  num_steps = %s' % self.num_steps]
-
-        self.set_variables(need_start=False, need_bounds=False)
-
-        self.input.responses = [
-            'objective_functions = %s' % len(objectives),
-            'no_gradients',
-            'no_hessians']
+        self.input.responses = collections.OrderedDict()
+        self.input.responses['objective_functions'] = 'default'
+        self.input.responses['no_gradients'] = ''
+        self.input.responses['no_hessians'] = ''
 
 
 class DakotaGlobalSAStudy(DakotaBase):
@@ -348,23 +479,20 @@ class DakotaGlobalSAStudy(DakotaBase):
     seed = Int(52983, iotype='in', desc='Seed for random number generator')
     samples = Int(100, iotype='in', low=1, desc='# of samples to evaluate')
 
-    def configure_input(self):
-        """ Configures input specification. """
-        objectives = self.get_objectives()
+    """ Configures input specification. """
 
-        self.input.method = [
-            'sampling',
-            '  output = %s' % self.output,
-            '  sample_type = %s' % self.sample_type,
-            '  seed = %s' % self.seed,
-            '  samples = %s' % self.samples]
+    def __init__(self):
+        super(DakotaGlobalSAStudy, self).__init__()
+        self.input.method = collections.OrderedDict()
+        self.input.method['sampling'] = ''
+        self.input.method['output'] = 'default'
+        self.input.method['sample_type'] = 'default'
+        self.input.method['seed'] = 'default'
+        self.input.method['samples'] = 'default'
 
-        self.set_variables(need_start=False, uniform=True)
-
-        names = ['%r' % name for name in objectives.keys()]
-        self.input.responses = [
-            'num_response_functions = %s' % len(objectives),
-            'response_descriptors = %s' % ' '.join(names),
-            'no_gradients',
-            'no_hessians']
+        self.input.responses = collections.OrderedDict()
+        self.input.responses['num_response_functions'] = 'default'
+        self.input.responses['response_descriptors'] = 'default'
+        self.input.responses['no_gradients'] = ''
+        self.input.responses['no_hessians'] = ''
 
