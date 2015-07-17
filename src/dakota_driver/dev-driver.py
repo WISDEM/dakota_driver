@@ -322,15 +322,15 @@ class pydakdriver(DakotaBase):
         print 'Dakota OpenmDAO Driver\n  Parameter Study(type):\n    options for type are\
               \n      vector, multi-dim, list, or centered'
 
-    def analytical_gradients(self,interval_type='formed'):
+    def analytical_gradients(self,interval_type='formed',fd_grad_step_size='1.e-4'):
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          self.input.responses['method_source dakota'] = ''
          self.input.responses['interval_type '+interval_type] = ''
-         self.fd_gradient_step_size = '1.e-4'
-         self.input.responses['fd_gradient_step_size'] = '-1'
+         self.fd_gradient_step_size = fd_grad_step_size
+         self.input.responses['fd_gradient_step_size'] = _NOT_SET
 
     def hessians(self):
          for key in self.input.responses:
@@ -338,36 +338,38 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='npsol_sqp'):
-        self.convergence_tolerance = '1.e-8'
-        self.input.responses['objective_functions']=-1
+    def Optimization(self,opt_type='npsol_sqp',conv_tolerance = '1.e-8'):
+        self.convergence_tolerance = conv_tolerance
+        self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
         if opt_type == 'npsol_sqp':
             self.input.method[opt_type] = ""
-            self.input.method['convergence_tolerance'] = -1  
+            self.input.method['convergence_tolerance'] = _NOT_SET 
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
-            self.input.method["seed"] = "-1"
+            self.input.method["seed"] = _NOT_SET
             self.seed = 10983
+#        if opt_type == 'conmin':
+            
 
     def Parameter_Study(self,study_type = 'vector'):
         if study_type == 'vector':
             self.input.method['vector_parameter_study'] = ""
-            self.input.method['final_point'] = "default"
-            self.input.method['num_steps'] = "default"
+            self.input.method['final_point'] = _NOT_SET 
+            self.input.method['num_steps'] = _NOT_SET 
         if study_type == 'multi-dim':
             self.input.method['multidim_parameter_study'] = ""
-            self.input.method['partitions'] = "default"
+            self.input.method['partitions'] = _NOT_SET 
         if study_type == 'list':   
             self.input.method['list_parameter_study'] = "" # todo
-            self.input.method['list_of_points'] = "default" # todo
-            self.input.responses['response_functions']='default' # todo: add responsens_not_objectives()
-        else: self.input.responses['objective_functions']='default'
+            self.input.method['list_of_points'] = _NOT_SET  # todo
+            self.input.responses['response_functions']=_NOT_SET  # todo: add responsens_not_objectives()
+        else: self.input.responses['objective_functions']=_NOT_SET 
         if study_type == 'centered':
             self.input.method['centered_parameter_study'] = ""
-            self.input.method['step_vector'] = "default" # todo
-            self.input.method['steps_per_variable'] = "default" # todo
+            self.input.method['step_vector'] = _NOT_SET  # todo
+            self.input.method['steps_per_variable'] = _NOT_SET  # todo
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
             
