@@ -24,6 +24,8 @@ from openmdao.util.decorators import add_delegate
 __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
 
+_NOT_SET = "SPECIFICATION DECLARED BUT NOT DEFINED"
+
 
 @add_delegate(HasParameters, HasObjectives)
 class DakotaBase(Driver):
@@ -167,13 +169,13 @@ class DakotaBase(Driver):
 
     def configure_input(self):
         """ Configures input specification, must be overridden. """
-        ##########
-        # method #
-        ##########
+
+        ######## 
+       # method #
+        ######## 
         n_params = self.total_parameters()
         if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
         for key in self.input.method:
-
             if key == 'output': self.input.method[key] = self.output
             if key == 'max_iterations': self.input.method[key] = self.max_iterations
             if key == 'max_function_evaluations': self.input.method[key] = self.max_function_evaluations
@@ -217,9 +219,9 @@ class DakotaBase(Driver):
             if key == 'seed': self.input.method[key] = self.seed
             if key == 'samples': self.input.method[key] = self.samples
 
-        #############
-        # responses #
-        #############
+        ########### 
+       # responses #
+        ########### 
         objectives = self.get_objectives()
         for key in self.input.responses:
             if key =='objective_functions': self.input.responses[key] = len(objectives)
@@ -234,10 +236,21 @@ class DakotaBase(Driver):
                 names = ['%r' % name for name in objectives.keys()]
                 self.input.responses[key] = ' '.join(names)
 
-         ################################################################
-        # method and response mapping from ordered dictionaries to lists #
-         ################################################################
+        ##################################################
+       # Verify that all input fields have been adressed #
+        ##################################################
+        def assignment_enforcemer(tag,val):
+             if val == _NOT_SET: raise ValueError(str(tag)+ " NOT DEFINED")
+        for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
+        for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
 
+        #############################################################
+       # map method and response from ordered dictionaries to lists  #
+       #                                                             #
+       # convention is if the value is an empty string there will be #
+       #    no equals sign. Otherwise, data will be inoyt to dakota  #
+       #    as "{key} = {associated value}"                          #
+        #############################################################
         temp_list = []
         for key in self.input.method:
             if self.input.method[key]:
@@ -349,7 +362,7 @@ class pydakdriver(DakotaBase):
         if study_type == 'list':   
             self.input.method['list_parameter_study'] = "" # todo
             self.input.method['list_of_points'] = "default" # todo
-            self.input.responses['response_functions']='default'
+            self.input.responses['response_functions']='default' # todo: add responsens_not_objectives()
         else: self.input.responses['objective_functions']='default'
         if study_type == 'centered':
             self.input.method['centered_parameter_study'] = ""
