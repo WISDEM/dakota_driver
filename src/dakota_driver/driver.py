@@ -322,15 +322,26 @@ class pydakdriver(DakotaBase):
         print 'Dakota OpenmDAO Driver\n  Parameter Study(type):\n    options for type are\
               \n      vector, multi-dim, list, or centered'
 
-    def analytical_gradients(self,interval_type='formed',fd_grad_step_size='1.e-4'):
+    def analytical_gradients(self,interval_type='formed',fd_gradient_step_size = '1.e-4'):
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          self.input.responses['method_source dakota'] = ''
          self.input.responses['interval_type '+interval_type] = ''
-         self.fd_gradient_step_size = fd_grad_step_size
+         self.fd_gradient_step_size = fd_gradient_step_size
          self.input.responses['fd_gradient_step_size'] = _NOT_SET
+
+    def numerical_gradients(self, method_source='dakota',
+                            interval_type= Enum(values=('forward', 'central'), iotype='in',
+                                            desc='Type of finite difference for gradients'),
+                            fd_gradient_step_size=_NOT_SET):
+         for key in self.input.responses:
+             if key == 'no_gradients':
+                  self.input.responses.pop(key)
+         if method_source=='dakota':self.input.responses['method_source dakota']
+         self.input.responses['interval_type'] = interval_type
+         self.input.responses['fd_gradient_step_size'] = fd_gradient_step_size
 
     def hessians(self):
          for key in self.input.responses:
@@ -338,19 +349,33 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='npsol_sqp',conv_tolerance = '1.e-8'):
+    def Optimization(self,opt_type='npsol_sqp',
+                     convergence_tolerance = '1.e-8',seed=_NOT_SET,max_iterations=_NOT_SET,
+                     max_function_evaluations=_NOT_SET):
         self.convergence_tolerance = conv_tolerance
         self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
         if opt_type == 'npsol_sqp':
             self.input.method[opt_type] = ""
-            self.input.method['convergence_tolerance'] = _NOT_SET 
+            self.input.method['convergence_tolerance'] = convergence_tolerance # please double check this kj 
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
-            self.input.method["seed"] = _NOT_SET
-            self.seed = 10983
-#        if opt_type == 'conmin':
+            self.input.method["seed"] = seed
+            self.seed = seed #10983
+        if opt_type == 'conmin':
+            self.input.method['max_iterations'] = max_iterations
+            self.input.method['max_function_evaluations'] = max_function_evaluations
+            self.input.method['convergence_tolerance'] = convergence_tolerance
+            self.input.method['constraint_tolerance'] = constraint_tolerance
+            self.input.method['fd_gradient_step_size'] = fd_gradient_step_size
+            self.input.method['interval_type'] = interval_type
+
+            self.input.responses['objective_functions'] = _NOT_SET
+            self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
+            self.input.responses['no_gradients'] = ''
+            self.umerical_gradients()
+            self.input.responses['no_hessians'] = ''
             
 
     def Parameter_Study(self,study_type = 'vector'):
