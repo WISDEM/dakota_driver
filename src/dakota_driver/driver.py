@@ -351,7 +351,7 @@ class pydakdriver(DakotaBase):
 
     def Optimization(self,opt_type='npsol_sqp',
                      convergence_tolerance = '1.e-8',seed=_NOT_SET,max_iterations=_NOT_SET,
-                     max_function_evaluations=_NOT_SET):
+                     max_function_evaluations=_NOT_SET, interval_typer = 'forward'):
         self.convergence_tolerance = conv_tolerance
         self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
@@ -362,19 +362,22 @@ class pydakdriver(DakotaBase):
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
             self.input.method["seed"] = seed
-            self.seed = seed #10983
+            self.seed = seed 
         if opt_type == 'conmin':
+            self.input.method["conmin"] = ''
+            self.input.method["output"] = ''
             self.input.method['max_iterations'] = max_iterations
             self.input.method['max_function_evaluations'] = max_function_evaluations
             self.input.method['convergence_tolerance'] = convergence_tolerance
             self.input.method['constraint_tolerance'] = constraint_tolerance
-            self.input.method['fd_gradient_step_size'] = fd_gradient_step_size
-            self.input.method['interval_type'] = interval_type
 
             self.input.responses['objective_functions'] = _NOT_SET
             self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
+            if interval_type in ['central','forward']:
+               self.input.method['interval_type'+interval_type]=''
+            else: self.raise_exception('invalid interval_type'+str(interval_type), ValueError)
             self.input.responses['no_gradients'] = ''
-            self.umerical_gradients()
+            self.numerical_gradients()
             self.input.responses['no_hessians'] = ''
             
 
