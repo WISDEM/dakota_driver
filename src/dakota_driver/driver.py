@@ -183,6 +183,7 @@ class DakotaBase(Driver):
             if key == 'constraint_tolerance': 
                if ineq_constraints: self.input.method[key] = self.constraint_tolerance
                else: self.input.method.pop(key) 
+            if key == 'seed': self.input.method[key] = self.seed
 
             # optimization
             if key == 'conmin':
@@ -190,14 +191,9 @@ class DakotaBase(Driver):
                 if ineq_constraints: self.input.method['conmin_mfd'] = ''
                 else: self.input.method['conmin_frcg'] = ''
                 self.input.method.pop(key)
-            if key == 'npsol_sqp': self.set_variables(True,need_bounds=True)
-            if key == 'sampling': self.set_variables(need_start=False, uniform=True)
-            
-            # Paramter studies
-            if key == 'multidim_parameter_study': self.set_variables(need_start=False)
-            if key == 'vector_parameter_study': self.set_variables(need_start=True, need_bounds=False)
-            # why is this false? if key == 'vector_parameter_study': self.set_variables(need_start=False, need_bounds=False)
 
+            
+            # parameter studies
             if key == 'partitions':
                 if len(self.partitions) != self.total_parameters():
                     self.raise_exception('#partitions (%s) != #parameters (%s)'
@@ -216,9 +212,13 @@ class DakotaBase(Driver):
             if key == 'num_steps': self.input.method[key] = self.num_steps
 
             if key == 'sample_type': self.input.method[key] = self.sample_type
-            if key == 'seed': self.input.method[key] = self.seed
             if key == 'samples': self.input.method[key] = self.samples
-
+        ########### 
+       # variables #
+        ########### 
+        self.set_variables(need_start=self.need_start,
+                           uniform=self.uniform,
+                           need_bounds=self.need_bounds)
         ########### 
        # responses #
         ########### 
@@ -317,6 +317,11 @@ class pydakdriver(DakotaBase):
         super(pydakdriver, self).__init__()
         self.input.method = collections.OrderedDict()
         self.input.responses = collections.OrderedDict()
+
+        # default definitions for set_variables
+        self.need_start = False 
+        self.uniform=False
+        self.need_bounds=True
  
     def print_instructions():
         print 'Dakota OpenmDAO Driver\n  Parameter Study(type):\n    options for type are\
@@ -342,6 +347,7 @@ class pydakdriver(DakotaBase):
          if method_source=='dakota':self.input.responses['method_source dakota']
          self.input.responses['interval_type'] = interval_type
          self.input.responses['fd_gradient_step_size'] = fd_gradient_step_size
+         self.fd_gradient_step_size = fd_gradient_step_size
 
     def hessians(self):
          for key in self.input.responses:
@@ -352,18 +358,25 @@ class pydakdriver(DakotaBase):
     def Optimization(self,opt_type='npsol_sqp',
                      convergence_tolerance = '1.e-8',seed=_NOT_SET,max_iterations=_NOT_SET,
                      max_function_evaluations=_NOT_SET, interval_typer = 'forward'):
-        self.convergence_tolerance = conv_tolerance
+        self.convergence_tolerance = convergence_tolerance
+        self.seed = seed
+        self.max_iterations=max_iterations
+        self.max_function_evaluations = max_function_evaluations
+
         self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
         if opt_type == 'npsol_sqp':
+            self.need_start=True
+            self.need_bounds=True
             self.input.method[opt_type] = ""
             self.input.method['convergence_tolerance'] = convergence_tolerance # please double check this kj 
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
             self.input.method["seed"] = seed
-            self.seed = seed 
         if opt_type == 'conmin':
+            self.need_start=True           
+
             self.input.method["conmin"] = ''
             self.input.method["output"] = ''
             self.input.method['max_iterations'] = max_iterations
@@ -371,30 +384,34 @@ class pydakdriver(DakotaBase):
             self.input.method['convergence_tolerance'] = convergence_tolerance
             self.input.method['constraint_tolerance'] = constraint_tolerance
 
-            self.input.responses['objective_functions'] = _NOT_SET
             self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
             if interval_type in ['central','forward']:
                self.input.method['interval_type'+interval_type]=''
             else: self.raise_exception('invalid interval_type'+str(interval_type), ValueError)
-            self.input.responses['no_gradients'] = ''
             self.numerical_gradients()
-            self.input.responses['no_hessians'] = ''
             
 
     def Parameter_Study(self,study_type = 'vector'):
         if study_type == 'vector':
+            self.need_start=True
+            self.need_bounds=False
+            # why was this false? legacy was self.set_variables(need_start=False, need_bounds=False)
             self.input.method['vector_parameter_study'] = ""
             self.input.method['final_point'] = _NOT_SET 
             self.input.method['num_steps'] = _NOT_SET 
+            self.final_point = _NOT_SET
+            self.num_steps = _NOT_SET
         if study_type == 'multi-dim':
+            self.need_start=False
             self.input.method['multidim_parameter_study'] = ""
             self.input.method['partitions'] = _NOT_SET 
-        if study_type == 'list':   
+            self.partitions =  _NOT_SET
+        if study_type == 'list': #todo: specifiy instructions for set_variables  
             self.input.method['list_parameter_study'] = "" # todo
             self.input.method['list_of_points'] = _NOT_SET  # todo
             self.input.responses['response_functions']=_NOT_SET  # todo: add responsens_not_objectives()
         else: self.input.responses['objective_functions']=_NOT_SET 
-        if study_type == 'centered':
+        if study_type == 'centered': #todo: specifiy instructions for set_variables
             self.input.method['centered_parameter_study'] = ""
             self.input.method['step_vector'] = _NOT_SET  # todo
             self.input.method['steps_per_variable'] = _NOT_SET  # todo
@@ -402,13 +419,16 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_hessians']=''
 
     def UQ(self,UQ_type = 'sampling',sample_type=
-         Enum('lhs', iotype='in', values=('random', 'lhs'),
+           Enum('lhs', iotype='in', values=('random', 'lhs'),
                        desc='Type of sampling')
-         seed=_NOT_SET,
-         samples = Int(100, iotype='in', low=1, 
-         desc='# of samples to evaluate')):
+           seed=_NOT_SET,
+           samples = Int(100, iotype='in', low=1, 
+           desc='# of samples to evaluate')
+           ):
             
             if UQ_type = 'sampling':
+                self.need_start = False
+                self.uniform = True)
                 self.input.method = collections.OrderedDict()
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _NOT_SET
@@ -419,8 +439,8 @@ class pydakdriver(DakotaBase):
                 self.input.responses = collections.OrderedDict()
                 self.input.responses['num_response_functions'] = _NOT_SET
                 self.input.responses['response_descriptors'] = _NOT_SET
-                self.input.responses['no_gradients'] = ''
-                self.input.responses['no_hessians'] = ''
+            self.input.responses['no_gradients'] = ''
+            self.input.responses['no_hessians'] = ''
                 
             
 ################################################################################
