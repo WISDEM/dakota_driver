@@ -397,6 +397,28 @@ class pydakdriver(DakotaBase):
             self.input.method['steps_per_variable'] = _NOT_SET  # todo
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
+
+    def UQ(self,UQ_type = 'sampling',sample_type=
+         Enum('lhs', iotype='in', values=('random', 'lhs'),
+                       desc='Type of sampling')
+         seed=_NOT_SET,
+         samples = Int(100, iotype='in', low=1, 
+         desc='# of samples to evaluate')):
+            
+            if UQ_type = 'sampling':
+                self.input.method = collections.OrderedDict()
+                self.input.method['sampling'] = ''
+                self.input.method['output'] = _NOT_SET
+                self.input.method['sample_type'] = sample_type
+                self.input.method['seed'] = _NOT_SET
+                self.input.method['samples'] = samples
+        
+                self.input.responses = collections.OrderedDict()
+                self.input.responses['num_response_functions'] = _NOT_SET
+                self.input.responses['response_descriptors'] = _NOT_SET
+                self.input.responses['no_gradients'] = ''
+                self.input.responses['no_hessians'] = ''
+                
             
 ################################################################################
 ################################################################################
@@ -510,14 +532,14 @@ class DakotaGlobalSAStudy(DakotaBase):
         super(DakotaGlobalSAStudy, self).__init__()
         self.input.method = collections.OrderedDict()
         self.input.method['sampling'] = ''
-        self.input.method['output'] = 'default'
-        self.input.method['sample_type'] = 'default'
-        self.input.method['seed'] = 'default'
-        self.input.method['samples'] = 'default'
+        self.input.method['output'] = _NOT_SET
+        self.input.method['sample_type'] = _NOT_SET
+        self.input.method['seed'] = _NOT_SET
+        self.input.method['samples'] = _NOT_SET
 
         self.input.responses = collections.OrderedDict()
-        self.input.responses['num_response_functions'] = 'default'
-        self.input.responses['response_descriptors'] = 'default'
+        self.input.responses['num_response_functions'] = _NOT_SET
+        self.input.responses['response_descriptors'] = _NOT_SET
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
 
