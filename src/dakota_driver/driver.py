@@ -420,15 +420,15 @@ class pydakdriver(DakotaBase):
 
     def UQ(self,UQ_type = 'sampling',sample_type=
            Enum('lhs', iotype='in', values=('random', 'lhs'),
-                       desc='Type of sampling')
+                       desc='Type of sampling'),
            seed=_NOT_SET,
            samples = Int(100, iotype='in', low=1, 
            desc='# of samples to evaluate')
            ):
             
-            if UQ_type = 'sampling':
+            if UQ_type == 'sampling':
                 self.need_start = False
-                self.uniform = True)
+                self.uniform = True
                 self.input.method = collections.OrderedDict()
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _NOT_SET
