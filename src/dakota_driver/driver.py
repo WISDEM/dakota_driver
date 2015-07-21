@@ -300,18 +300,135 @@ class DakotaBase(Driver):
 
         self.input.variables.append(
             '  descriptors  %s' % ' '.join(names)
+
+        # ------------ special distributions cases ------- -------- #
+
+        if self.normal_descriptors:
+            self.input.variables.extend([
+                'lognormal_uncertain = %s' % len(self.normal_means),
+                '  means = %s' % ' '.join(self.normal_means),
+                '  std_deviations = %s' % ' '.join(self.normal_std_devs),
+                '  descriptors = %s' % ' '.join(self.normal_descriptors)
+                ])
+                   
+        if self.lognormal_descriptors:
+            self.input.variables.extend([
+                'lognormal_uncertain = %s' % len(self.lognormal_means),
+                '  means = %s' % ' '.join(self.lognormal_means),
+                '  std_deviations = %s' % ' '.join(self.lognormal_std_devs),
+                '  descriptors = %s' % ' '.join(self.lognormal_descriptors)
+                ])
+                   
+        if self.exponential_descriptors:
+            self.input.variables.extend([
+                'exponential_uncertain = %s' % len(self.exponential_descriptors),
+                '  betas = %s' % ' '.join(self.exponential_betas),
+                '  descriptors = %s' % ' '.join(self.exponential_descriptors)
+                ])
+                   
+        if self.beta_descriptors:
+            self.input.variables.extend([
+                'beta_uncertain = %s' % len(self.beta_descriptors),
+                '  betas = %s' % ' '.join(self.beta_betas),
+                '  alphas = %s' % ' '.join(self.beta_alphas),
+                '  descriptors = %s' % ' '.join(self.beta_descriptors),
+                '  lower_bounds = %s' % ' '.join(self.beta_lower_bounds),
+                '  upper_bounds = %s' % ' '.join(self.beta_upper_bounds)
+                ])
+
+        if self.gamma_descriptors:
+            self.input.variables.extend([
+                'beta_uncertain = %s' % len(self.gamma_descriptors),
+                '  betas = %s' % ' '.join(self.gamma_betas),
+                '  alphas = %s' % ' '.join(self.gamma_alphas),
+                '  descriptors = %s' % ' '.join(self.gamma_descriptors)
+                ])
+
         )
 
+# ---------------------------  special distributions ---------------------- #
 
-class DakotaOptimizer(DakotaBase):
-    """ Base class for optimizers using the DAKOTA Python interface. """
-    # Currently only a 'marker' class.
+    lognormal_means= []
+    lognormal_std_devs = []
+    lognormal_descriptors = []
 
-    implements(IOptimizer)
+    normal_means = []
+    normal_std_devs = []
+    normal_descriptors = []
 
+    exponential_betas = []
+    exponential_descriptors = []
+
+    beta_betas = []
+    beta_alphas = []
+    beta_descriptors = []
+    beta_lower_bounds = []
+    beta_upper_bounds = []
+
+    gamma_alphas = []
+    gamma_betas = []
+    gamma_descriptors = []
+
+    def add_special_distribution(self, var, dist, alpha = _NOT_SET, beta = _NOT_SET, 
+                                 mean = _NOT_SET, std_dev = _NOT_SET, descriptor = _NOT_SET,
+                                 lower_bounds = _NOT_SET, upper_bounds = _NOT_SET ):
+        def check_set(option):
+            if option == _NOT_SET: raise ValueError(str(option)+ " NOT DEFINED FOR VARIABLE "+str(var))
+
+        if dist == 'normal_uncertain':
+            check_set(std_dev)
+            check_set(mean)
+            check_set(descriptor)
+            self.normal_means.append(mean)
+            self.normal_std_devs.append(std_dev)
+            self.normal_descriptors.append(descriptor)
+               
+        if dist == 'lognormal_uncertain':
+            check_set(std_dev)
+            check_set(mean)
+            check_set(descriptor)
+            self.lognormal_means.append(mean)
+            self.lognormal_std_devs.append(std_dev)
+            self.lognormal_descriptors.append(descriptor)
+               
+        if dist == 'exponential_uncertain':
+            check_set(beta)
+            check_set(descriptor)
+            self.exponential_betas.append(beta)
+            self.exponential_descriptors.append(descriptor)
+
+        if dist == 'beta_uncertain':
+            check_set(beta)
+            check_set(alpha)
+            check_set(descriptor)
+            check_set(lower_bounds)
+            check_set(upper_bounds)
+
+            self.beta_betas.append(beta)
+            self.beta_alphas.append(alpha)
+            self.beta_descriptors.append(descriptor)
+            self.beta_lower_bounds.append(lower_bounds)
+            self.beta_upper_bounds.append(upper_bounds)
+            
+        if dist == "gamma_uncertain":
+            check_set(beta)
+            check_set(alpha)
+            check_set(descriptor)
+
+            self.gamma_alphas.append(alpha)
+            self.gamma_betas.append(beta)
+            self.gamma_descriptors.append(descriptor)
+
+#class DakotaOptimizer(DakotaBase):
+#    """ Base class for optimizers using the DAKOTA Python interface. """
+#    # Currently only a 'marker' class.
+##
+#    implements(IOptimizer)
+#
 ################################################################################
 ########################## Hierarchical Driver ################################
 class pydakdriver(DakotaBase):
+    implements(IOptimizer) # Not sure why this wasn't implemented everywhere....
 
     def __init__(self):
         super(pydakdriver, self).__init__()
