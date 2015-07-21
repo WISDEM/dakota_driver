@@ -323,18 +323,15 @@ class pydakdriver(DakotaBase):
         self.uniform=False
         self.need_bounds=True
  
-    def print_instructions():
-        print 'Dakota OpenmDAO Driver\n  Parameter Study(type):\n    options for type are\
-              \n      vector, multi-dim, list, or centered'
-
-    def analytical_gradients(self,interval_type='formed',fd_gradient_step_size = '1.e-4'):
+    def analytical_gradients(self):
+         self.interval_typ = 'formed'
+         self.fd_gradient_step_size = '1.e-4'
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          self.input.responses['method_source dakota'] = ''
          self.input.responses['interval_type '+interval_type] = ''
-         self.fd_gradient_step_size = fd_gradient_step_size
          self.input.responses['fd_gradient_step_size'] = _NOT_SET
 
     def numerical_gradients(self, method_source='dakota',
@@ -355,13 +352,11 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='npsol_sqp',
-                     convergence_tolerance = '1.e-8',seed=_NOT_SET,max_iterations=_NOT_SET,
-                     max_function_evaluations=_NOT_SET, interval_typer = 'forward'):
-        self.convergence_tolerance = convergence_tolerance
-        self.seed = seed
-        self.max_iterations=max_iterations
-        self.max_function_evaluations = max_function_evaluations
+    def Optimization(self,opt_type='npsol_sqp', interval_typer = 'forward'):
+        self.convergence_tolerance = '1.e-8'
+        self.seed = _NOT_SET
+        self.max_iterations = '200'
+        self.max_function_evaluations = '2000'
 
         self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
@@ -419,16 +414,10 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
-    def UQ(self,UQ_type = 'sampling',sample_type=
-           Enum('lhs', iotype='in', values=('random', 'lhs'),
-                       desc='Type of sampling'),
-           seed=_NOT_SET,
-           samples = Int(100, iotype='in', low=1, 
-           desc='# of samples to evaluate')
-           ):
-            self.sample_type = sample_type
-            self.seed = seed
-            self.samples=samples
+    def UQ(self,UQ_type = 'sampling'):
+            self.sample_type =  'lhs'
+            self.seed = _NOT_SET
+            self.samples=100
             
             if UQ_type == 'sampling':
                 self.need_start = False
@@ -436,137 +425,13 @@ class pydakdriver(DakotaBase):
                 self.input.method = collections.OrderedDict()
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _NOT_SET
-                self.input.method['sample_type'] = sample_type
+                self.input.method['sample_type'] = _NOT_SET
                 self.input.method['seed'] = _NOT_SET
-                self.input.method['samples'] = samples
+                self.input.method['samples'] = _NOT_SET
         
                 self.input.responses = collections.OrderedDict()
                 self.input.responses['num_response_functions'] = _NOT_SET
                 self.input.responses['response_descriptors'] = _NOT_SET
             self.input.responses['no_gradients'] = ''
             self.input.responses['no_hessians'] = ''
-                
-            
 ################################################################################
-################################################################################
-
-@add_delegate(HasIneqConstraints)
-class DakotaCONMIN(DakotaOptimizer):
-    """ CONMIN optimizer using DAKOTA.  """
-
-    implements(IHasIneqConstraints)
-
-    max_iterations = Int(100, low=1, iotype='in',
-                         desc='Max number of iterations to execute')
-    max_function_evaluations = Int(1000, low=1, iotype='in',
-                                   desc='Max number of function evaluations')
-    convergence_tolerance = Float(1.e-7, low=1.e-10, iotype='in',
-                                  desc='Convergence tolerance')
-    constraint_tolerance = Float(1.e-7, low=1.e-10, iotype='in',
-                                 desc='Constraint tolerance')
-    fd_gradient_step_size = Float(1.e-5, low=1.e-10, iotype='in',
-                                  desc='Relative step size for gradients')
-    interval_type = Enum(values=('forward', 'central'), iotype='in',
-                         desc='Type of finite difference for gradients')
-
-    def __init__(self):
-        super(DakotaCONMIN, self).__init__()
-        # DakotaOptimizer leaves _max_objectives at 0 (unlimited).
-        self._hasobjectives._max_objectives = 1
-
-        """ Configures input specification. """
-
-        self.input.method = collections.OrderedDict()
-        self.input.method["conmin"] = ''
-        self.input.method["output"] = ''
-        self.input.method["max_iterations"] = -1
-        self.input.method["max_function_evaluations"] = -1
-        self.input.method["convergence_tolerance"] = -1
-        self.input.method["constraint_tolerance"] = -1
-
-        self.input.responses = collections.OrderedDict()
-        self.input.responses['objective_functions'] = -1
-        self.input.responses['nonlinear_inequality_constraints'] = -1
-        self.input.responses['numerical_gradients'] = ''
-        self.input.responses['method_source dakota'] = ''
-        self.input.responses['interval_type'] = 'default'
-        self.input.responses['fd_gradient_step_size'] = 'default'
-        self.input.responses['no_hessians'] = ''
-
-
-class DakotaMultidimStudy(DakotaBase):
-    """ Multidimensional parameter study using DAKOTA. """
-
-    partitions = List(Int, low=1, iotype='in',
-                      desc='List giving # of partitions for each parameter')
-
-    """ Configures input specification. """
-
-    def __init__(self):
-        super(DakotaMultidimStudy, self).__init__()
-
-        self.input.method = collections.OrderedDict()
-        self.input.method['multidim_parameter_study'] = ''
-        self.input.method['output'] = 'default'
-        self.input.method['partitions'] = 'default'
-
-        self.input.responses = collections.OrderedDict()
-        self.input.responses['objective_functions'] = 'default'
-        self.input.responses['no_gradients'] = ''
-        self.input.responses['no_hessians'] = ''
-
-class DakotaVectorStudy(DakotaBase):
-    """ Vector parameter study using DAKOTA. """
-
-    final_point = List(Float, iotype='in',
-                       desc='List of final parameter values')
-    num_steps = Int(1, low=1, iotype='in',
-                    desc='Number of steps along path to evaluate')
-
-    def __init__(self):
-        super(DakotaVectorStudy, self).__init__()
-        for dname in self._delegates_:
-            delegate = getattr(self, dname)
-            if isinstance(delegate, HasParameters):
-                delegate._allowed_types.append('unbounded')
-                break
-
-        """ Configures the input specification. """
-
-        self.input.method = collections.OrderedDict()
-        self.input.method['output'] = 'default'
-        self.input.method['vector_parameter_study'] = ""
-        self.input.method['final_point'] = 'default'
-        self.input.method['num_steps'] = 'default'
-
-        self.input.responses = collections.OrderedDict()
-        self.input.responses['objective_functions'] = 'default'
-        self.input.responses['no_gradients'] = ''
-        self.input.responses['no_hessians'] = ''
-
-
-class DakotaGlobalSAStudy(DakotaBase):
-    """ Global sensitivity analysis using DAKOTA. """
-
-    sample_type = Enum('lhs', iotype='in', values=('random', 'lhs'),
-                       desc='Type of sampling')
-    seed = Int(52983, iotype='in', desc='Seed for random number generator')
-    samples = Int(100, iotype='in', low=1, desc='# of samples to evaluate')
-
-    """ Configures input specification. """
-
-    def __init__(self):
-        super(DakotaGlobalSAStudy, self).__init__()
-        self.input.method = collections.OrderedDict()
-        self.input.method['sampling'] = ''
-        self.input.method['output'] = _NOT_SET
-        self.input.method['sample_type'] = _NOT_SET
-        self.input.method['seed'] = _NOT_SET
-        self.input.method['samples'] = _NOT_SET
-
-        self.input.responses = collections.OrderedDict()
-        self.input.responses['num_response_functions'] = _NOT_SET
-        self.input.responses['response_descriptors'] = _NOT_SET
-        self.input.responses['no_gradients'] = ''
-        self.input.responses['no_hessians'] = ''
-
