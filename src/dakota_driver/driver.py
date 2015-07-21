@@ -392,6 +392,7 @@ class pydakdriver(DakotaBase):
             
 
     def Parameter_Study(self,study_type = 'vector'):
+        self.study_type = study_type
         if study_type == 'vector':
             self.need_start=True
             self.need_bounds=False
@@ -425,6 +426,9 @@ class pydakdriver(DakotaBase):
            samples = Int(100, iotype='in', low=1, 
            desc='# of samples to evaluate')
            ):
+            self.sample_type = sample_type
+            self.seed = seed
+            self.samples=samples
             
             if UQ_type == 'sampling':
                 self.need_start = False
