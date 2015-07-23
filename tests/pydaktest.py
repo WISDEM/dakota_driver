@@ -24,7 +24,7 @@ class rosenDistTest(Assembly):
         driver.sample_type = 'random'
         driver.seed = 20
         driver.samples = 500 
-        driver.add_special_distribution('rose.x2', "weibull", descriptor = "the x2 variable", alpha = .5, beta = 0.2)
+        driver.add_special_distribution('rose.x2', "weibull", alpha = .5, beta = 0.2)
         driver.add_parameter('rose.x1', low=-1.5, high=1.5)
         driver.add_objective('rose.f')
 
