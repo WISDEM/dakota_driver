@@ -387,7 +387,7 @@ class DakotaBase(Driver):
     weibull_descriptors = []
 
     def add_special_distribution(self, var, dist, alpha = _NOT_SET, beta = _NOT_SET, 
-                                 mean = _NOT_SET, std_dev = _NOT_SET, descriptor = _NOT_SET,
+                                 mean = _NOT_SET, std_dev = _NOT_SET,
                                  lower_bounds = _NOT_SET, upper_bounds = _NOT_SET ):
         def check_set(option):
             if option == _NOT_SET: raise ValueError("INCOMPLETE DEFINITION FOR VARIABLE "+str(var))
@@ -395,15 +395,13 @@ class DakotaBase(Driver):
         if dist == 'normal':
             check_set(std_dev)
             check_set(mean)
-            check_set(descriptor)
             self.normal_means.append(str(mean))
             self.normal_std_devs.append(str(std_dev))
-            self.normal_descriptors.append(descriptor)
+            self.normal_descriptors.append(var)
                
         elif dist == 'lognormal':
             check_set(std_dev)
             check_set(mean)
-            check_set(descriptor)
             self.lognormal_means.append(str(mean))
             self.lognormal_std_devs.append(str(std_dev))
             self.lognormal_descriptors.append(descriptor)
@@ -417,29 +415,26 @@ class DakotaBase(Driver):
         elif dist == 'beta':
             check_set(beta)
             check_set(alpha)
-            check_set(descriptor)
             check_set(lower_bounds)
             check_set(upper_bounds)
 
             self.beta_betas.append(str(beta))
             self.beta_alphas.append(str(alpha))
-            self.beta_descriptors.append(descriptor)
+            self.beta_descriptors.append(var)
             self.beta_lower_bounds.append(str(lower_bounds))
             self.beta_upper_bounds.append(str(upper_bounds))
             
         elif dist == "gamma":
             check_set(beta)
             check_set(alpha)
-            check_set(descriptor)
 
             self.gamma_alphas.append(str(alpha))
             self.gamma_betas.append(str(beta))
-            self.gamma_descriptors.append(descriptor)
+            self.gamma_descriptors.append(var)
 
         elif dist == "weibull":
             check_set(beta)
             check_set(alpha)
-            check_set(descriptor)
 
             self.weibull_alphas.append(str(alpha))
             self.weibull_betas.append(str(beta))
