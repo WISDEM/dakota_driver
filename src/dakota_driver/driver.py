@@ -49,6 +49,10 @@ class DakotaBase(Driver):
     def __init__(self):
         super(DakotaBase, self).__init__()
 
+        # allow for special variable distributions
+        self.special_distribution_variables = []
+        self.clear_special_variables()
+
         # Set baseline input, don't touch 'interface'.
         self.input = DakotaInput(environment=[],
                                  method=[],
@@ -61,7 +65,7 @@ class DakotaBase(Driver):
         super(DakotaBase, self).check_config(strict=strict)
 
         parameters = self.get_parameters()
-        if not parameters:
+        if not parameters and not self.special_distribution_variables:
             self.raise_exception('No parameters, run aborted', ValueError)
 
         objectives = self.get_objectives()
@@ -74,6 +78,10 @@ class DakotaBase(Driver):
         tabular graphics data in the ``environment`` section.
         DAKOTA will then call our :meth:`dakota_callback` during the run.
         """
+        parameters = self.get_parameters()
+        if not parameters:
+            self.raise_exception('No parameters, run aborted', ValueError)
+
         if not self.input.method:
             self.raise_exception('Method not set', ValueError)
         if not self.input.variables:
@@ -274,60 +282,60 @@ class DakotaBase(Driver):
         """ Set :class:`DakotaInput` ``variables`` section. """
 
         parameters = self.get_parameters()
-
-        if uniform:
-            self.input.variables = [
-                'uniform_uncertain = %s' % self.total_parameters()]
-        else:
-            self.input.variables = [
-                'continuous_design = %s' % self.total_parameters()]
-
-        if need_start:
-            initial = [str(val) for val in self.eval_parameters(dtype=None)]
+        if parameters:
+            if uniform:
+                self.input.variables = [
+                    'uniform_uncertain = %s' % self.total_parameters()]
+            else:
+                self.input.variables = [
+                    'continuous_design = %s' % self.total_parameters()]
+    
+            if need_start:
+                initial = [str(val) for val in self.eval_parameters(dtype=None)]
+                self.input.variables.append(
+                    '  initial_point %s' % ' '.join(initial))
+    
+            if need_bounds:
+                lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
+                ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
+                self.input.variables.extend([
+                    '  lower_bounds %s' % ' '.join(lbounds),
+                    '  upper_bounds %s' % ' '.join(ubounds)])
+    
+            names = []
+            for param in parameters.values():
+                for name in param.names:
+                    names.append('%r' % name)
+    
             self.input.variables.append(
-                '  initial_point %s' % ' '.join(initial))
-
-        if need_bounds:
-            lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
-            ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
-            self.input.variables.extend([
-                '  lower_bounds %s' % ' '.join(lbounds),
-                '  upper_bounds %s' % ' '.join(ubounds)])
-
-        names = []
-        for param in parameters.values():
-            for name in param.names:
-                names.append('%r' % name)
-
-        self.input.variables.append(
-            '  descriptors  %s' % ' '.join(names)
-        )
+                '  descriptors  %s' % ' '.join(names)
+            )
         # ------------ special distributions cases ------- -------- #
         for var in self.special_distribution_variables:
-             self.add_parameter(var,low= 0, high = 1)
+             self.add_parameter(var,low= -999, high = 999)
 
 
         if self.normal_descriptors:
             self.input.variables.extend([
-                'lognormal_uncertain = %s' % len(self.normal_means),
-                '  means = %s' % ' '.join(self.normal_means),
-                '  std_deviations = %s' % ' '.join(self.normal_std_devs),
-                '  descriptors = %s' % ' '.join(self.normal_descriptors)
+                'normal_uncertain =  %s' % len(self.normal_means),
+                '  means  %s' % ' '.join(self.normal_means),
+                '  std_deviations  %s' % ' '.join(self.normal_std_devs),
+                "  descriptors  '%s'" % "' '".join(self.normal_descriptors)
                 ])
                    
         if self.lognormal_descriptors:
             self.input.variables.extend([
                 'lognormal_uncertain = %s' % len(self.lognormal_means),
-                '  means = %s' % ' '.join(self.lognormal_means),
-                '  std_deviations = %s' % ' '.join(self.lognormal_std_devs),
-                '  descriptors = %s' % ' '.join(self.lognormal_descriptors)
+                '  means  %s' % ' '.join(self.lognormal_means),
+                '  std_deviations  %s' % ' '.join(self.lognormal_std_devs),
+                "  descriptors  '%s'" % "' '".join(self.lognormal_descriptors)
                 ])
                    
         if self.exponential_descriptors:
             self.input.variables.extend([
                 'exponential_uncertain = %s' % len(self.exponential_descriptors),
-                '  betas = %s' % ' '.join(self.exponential_betas),
-                '  descriptors = %s' % ' '.join(self.exponential_descriptors)
+                '  betas  %s' % ' '.join(self.exponential_betas),
+                "  descriptors ' %s'" % "' '".join(self.exponential_descriptors)
                 ])
                    
         if self.beta_descriptors:
@@ -335,7 +343,7 @@ class DakotaBase(Driver):
                 'beta_uncertain = %s' % len(self.beta_descriptors),
                 '  betas = %s' % ' '.join(self.beta_betas),
                 '  alphas = %s' % ' '.join(self.beta_alphas),
-                '  descriptors = %s' % ' '.join(self.beta_descriptors),
+                "  descriptors = '%s'" % "' '".join(self.beta_descriptors),
                 '  lower_bounds = %s' % ' '.join(self.beta_lower_bounds),
                 '  upper_bounds = %s' % ' '.join(self.beta_upper_bounds)
                 ])
@@ -345,46 +353,54 @@ class DakotaBase(Driver):
                 'beta_uncertain = %s' % len(self.gamma_descriptors),
                 '  betas = %s' % ' '.join(self.gamma_betas),
                 '  alphas = %s' % ' '.join(self.gamma_alphas),
-                '  descriptors = %s' % ' '.join(self.gamma_descriptors)
+                "  descriptors = '%s'" % "' '".join(self.gamma_descriptors)
                 ])
 
         if self.weibull_descriptors:
             self.input.variables.extend([
                 'weibull_uncertain = %s' % len(self.weibull_descriptors),
-                '  betas = %s' % ' '.join(self.weibull_betas),
-                '  alphas = %s' % ' '.join(self.weibull_alphas),
-                "  descriptors = '%s'" % "' '".join(self.weibull_descriptors)
+                '  betas  %s' % ' '.join(self.weibull_betas),
+                '  alphas  %s' % ' '.join(self.weibull_alphas),
+                "  descriptors  '%s'" % "' '".join(self.weibull_descriptors)
                 ])
         
 
 # ---------------------------  special distributions ---------------------- #
  
-    special_distribution_variables = []
+    def clear_special_variables(self):
+       for var in self.special_distribution_variables:
+          try: self.remove_parameter(var)
+          except AttributeError:
+             print var +' is being cleared but its not declared'
+             pass
+       self.special_distribution_variables = []
 
-    normal_means = []
-    normal_std_devs = []
-    normal_descriptors = []
+       self.normal_means = []
+       self.normal_std_devs = []
+       self.normal_descriptors = []
+       #normal_lower_bounds = []
+       #normal_upper_bounds = []
+   
+       self.lognormal_means= []
+       self.lognormal_std_devs = []
+       self.lognormal_descriptors = []
+   
+       self.exponential_betas = []
+       self.exponential_descriptors = []
+   
+       self.beta_betas = []
+       self.beta_alphas = []
+       self.beta_descriptors = []
+       self.beta_lower_bounds = []
+       self.beta_upper_bounds = []
 
-    lognormal_means= []
-    lognormal_std_devs = []
-    lognormal_descriptors = []
+       self.gamma_alphas = []
+       self.gamma_betas = []
+       self.gamma_descriptors = []
 
-    exponential_betas = []
-    exponential_descriptors = []
-
-    beta_betas = []
-    beta_alphas = []
-    beta_descriptors = []
-    beta_lower_bounds = []
-    beta_upper_bounds = []
-
-    gamma_alphas = []
-    gamma_betas = []
-    gamma_descriptors = []
-
-    weibull_alphas = []
-    weibull_betas = []
-    weibull_descriptors = []
+       self.weibull_alphas = []
+       self.weibull_betas = []
+       self.weibull_descriptors = []
 
     def add_special_distribution(self, var, dist, alpha = _NOT_SET, beta = _NOT_SET, 
                                  mean = _NOT_SET, std_dev = _NOT_SET,
@@ -395,6 +411,10 @@ class DakotaBase(Driver):
         if dist == 'normal':
             check_set(std_dev)
             check_set(mean)
+           # check_set(lower_bounds)
+           # check_set(upper_bounds)
+          #  self.normal_lower_bounds.append(str(lower_bounds))
+          #  self.normal_upper_bounds.append(str(upper_bounds))
             self.normal_means.append(str(mean))
             self.normal_std_devs.append(str(std_dev))
             self.normal_descriptors.append(var)
@@ -508,7 +528,6 @@ class pydakdriver(DakotaBase):
             self.need_start=True
             self.need_bounds=True
             self.input.method[opt_type] = ""
-            self.input.method['convergence_tolerance'] = convergence_tolerance # please double check this kj 
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
             self.input.method["seed"] = seed
@@ -517,10 +536,7 @@ class pydakdriver(DakotaBase):
 
             self.input.method["conmin"] = ''
             self.input.method["output"] = ''
-            self.input.method['max_iterations'] = max_iterations
-            self.input.method['max_function_evaluations'] = max_function_evaluations
-            self.input.method['convergence_tolerance'] = convergence_tolerance
-            self.input.method['constraint_tolerance'] = constraint_tolerance
+            self.input.method['constraint_tolerance'] = '1.e-8'
 
             self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
             if interval_type in ['central','forward']:
