@@ -17,6 +17,17 @@ example usage:
     dakDriver.samples = 50
     dakDriver.seed = 4723
     driver = self.add('driver',dakDriver)
+    driver.workflow.add('lcoe_se')
+    driver.stdout = 'dakota.out'
+    driver.stderr = 'dakota.err'
+
+    # clears all previously added special distributions 
+    (used during multiple iterations of assembly or other special cases)
+    (don't use remove_parameter for special distribution variables)
+    driver.clear_special_variables()
+
+    driver.add_special_distribution('lcoe_se.A', 'normal',  mean = _mean_A, std_dev = _std_A)
+    driver.add_parameter('lcoe_se.k',low = 0.3, high = 3)
 
 ==================================================================================================
 There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
