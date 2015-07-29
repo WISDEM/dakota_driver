@@ -156,6 +156,7 @@ class DakotaBase(Driver):
             expressions.extend(self.get_ineq_constraints().values())
 
         fns = []
+        fnGrads = []
         for i, expr in enumerate(expressions):
             if asv[i] & 1:
                 val = expr.evaluate(self.parent)
@@ -164,13 +165,15 @@ class DakotaBase(Driver):
                 else:
                     fns.append(val)
             if asv[i] & 2:
-                self.raise_exception('Gradients not supported yet',
-                                     NotImplementedError)
+               val = expr.evaluate_gradient(self.parent)
+               fnGrads.append(val)
+               # self.raise_exception('Gradients not supported yet',
+               #                      NotImplementedError)
             if asv[i] & 4:
                 self.raise_exception('Hessians not supported yet',
                                      NotImplementedError)
 
-        retval = dict(fns=array(fns))
+        retval = dict(fns=array(fns), fnGrads = array(fnGrads))
         self._logger.debug('returning %s', retval)
         return retval
 
@@ -236,7 +239,8 @@ class DakotaBase(Driver):
             if key == 'nonlinear_inequality_constraints' :
                if ineq_constraints: self.input.responses[key] = ineq_constraints
                else: self.input.responses.pop(key)
-            if key == 'interval_type': self.input.responses[key] = self.interval_type
+            if key == 'interval_type': 
+               self.input.responses = collections.OrderedDict([(key+' '+self.interval_type, v) if k == key else (k, v) for k, v in self.input.responses.items()])
             if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
 
             if key == 'num_response_functions': self.input.responses[key] = len(objectives)
@@ -487,35 +491,35 @@ class pydakdriver(DakotaBase):
         self.need_bounds=True
  
     def analytical_gradients(self):
-         self.interval_typ = 'formed'
+         self.interval_type = 'forward'
          self.fd_gradient_step_size = '1.e-4'
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          self.input.responses['method_source dakota'] = ''
-         self.input.responses['interval_type '+interval_type] = ''
+         self.input.responses['interval_type'] = ''
          self.input.responses['fd_gradient_step_size'] = _NOT_SET
 
-    def numerical_gradients(self, method_source='dakota',
-                            interval_type= Enum(values=('forward', 'central'), iotype='in',
-                                            desc='Type of finite difference for gradients'),
-                            fd_gradient_step_size=_NOT_SET):
+    def numerical_gradients(self, method_source='dakota'):
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
-         if method_source=='dakota':self.input.responses['method_source dakota']
-         self.input.responses['interval_type'] = interval_type
-         self.input.responses['fd_gradient_step_size'] = fd_gradient_step_size
-         self.fd_gradient_step_size = fd_gradient_step_size
+         self.input.responses['numerical_gradients'] = ''
+         if method_source=='dakota':self.input.responses['method_source dakota']=''
+         self.fd_gradient_step_size = '1e-5'
+         self.interval_type = 'forward'
+         self.input.responses['interval_type'] = self.interval_type
+         self.input.responses['fd_gradient_step_size'] = self.fd_gradient_step_size
 
     def hessians(self):
+         self.input.responses['numerical_hessians']=''
          for key in self.input.responses:
              if key == 'no_hessians':
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='npsol_sqp', interval_typer = 'forward'):
+    def Optimization(self,opt_type='optpp_newton', interval_typer = 'forward'):
         self.convergence_tolerance = '1.e-8'
         self.seed = _NOT_SET
         self.max_iterations = '200'
@@ -524,10 +528,12 @@ class pydakdriver(DakotaBase):
         self.input.responses['objective_functions']=_NOT_SET
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
-        if opt_type == 'npsol_sqp':
+        if opt_type == 'optpp_newton':
             self.need_start=True
             self.need_bounds=True
             self.input.method[opt_type] = ""
+            self.analytical_gradients()
+            self.hessians()
         if opt_type == 'efficient_global':
             self.input.method["efficiency_global"] = ""
             self.input.method["seed"] = seed
