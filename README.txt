@@ -5,14 +5,24 @@ To view the Sphinx documentation for this distribution, type:
 
 plugin docs dakota_driver
 
+This can be installed using `plugin install` in an openmdao environment after
+the succesful installation of pyDAKOTA
+
 import driver using:
     from dakota_driver.driver import pydakdriver
 
-There are four main configuration types for pydakdriver - UQ, Parameter_study, Optimization, and DOE.
+example usage:
+    dakDriver = pydakdriver()
+    dakDriver.UQ()
+    dakDriver.samples = 50
+    dakDriver.seed = 4723
+    driver = self.add('driver',dakDriver)
+
+==================================================================================================
+There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
 ==================================================================================================
 ==================================================================================================
-==================================================================================================
-    UQ
+    UQ  ( Uncertainty Quantification )
 ==================================================================================================
        usage: pydakdriver.UQ( UQ_type = 'sampling', sample_type = 'lhs', seed = __, samples = 100)
        description: uncertainty quantification driver configuration
@@ -21,10 +31,12 @@ There are four main configuration types for pydakdriver - UQ, Parameter_study, O
               options: 
                  'sampling'
                     description: monte carlo sampling
-           sample_type = random sampling approach
-              options: 'lhs', 'random', incremental_lhs, incremental_random
-           seed = seed for random number generator
-           samples = number of samples to be taken
+       Option Descriptions
+       ------------------
+       sample_type = random sampling approach
+          options: 'lhs', 'random', incremental_lhs, incremental_random
+       seed = seed for random number generator
+       samples = number of samples to be taken
 ==================================================================================================
 ==================================================================================================
    Parameter_study
@@ -111,4 +123,15 @@ There are four main configuration types for pydakdriver - UQ, Parameter_study, O
              Specifies how to compute gradients and hessians 
              options are 'forward', 'central'
 ==================================================================================================
-NOTES
+Notes for Future Development
+----------------------------
+- DAKOTA's Design of Experiment analysis could easily be incorporated into
+  this driver
+- A new class of driver for facilitating optimization under uncertainty and
+  other nested DAKOTA approaches could be implemented.
+- There is currently no support for analytica hessian evaluations.
+   as fns is the keyword for function evaluations and fnGrads is the keyword
+   for gradient evaluations, fnHessians is the keyword for hessian evaluations.
+   Gradient evaluations have only been tested for single gradient evaluations,
+   and may potentially fail under multiple gradient functions.
+   These functionalities are implemented in the "dakota_callback" function in driver.py
