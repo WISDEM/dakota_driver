@@ -28,11 +28,25 @@ class rosenDistTest(Assembly):
         driver.add_parameter('rose.x1', low=-1.5, high=1.5)
         driver.add_objective('rose.f')
 
-class rosentest(Assembly):
+class rosenTest(Assembly):
     def configure(self):
         self.add('rose', rosen())
         driver_obj = pydakdriver()
-        driver_obj.UQ()
+        driver_obj.Parameter_Study(study_type = 'centered')
+        driver = self.add('driver',driver_obj)
+        driver.stdout = 'dakota.out'
+        driver.stderr = 'dakota.err'
+        driver.step_vector = [.1,.1]
+        driver.steps_per_variable = 9
+        driver.add_parameter('rose.x1', low=-1.5, high=1.5)
+        driver.add_parameter('rose.x2', low=-1.5, high=1.5)
+        driver.add_objective('rose.f')
+
+class rosenOptTest(Assembly):
+    def configure(self):
+        self.add('rose', rosen())
+        driver_obj = pydakdriver()
+        driver_obj.Optimization(opt_type='conmin')
         driver = self.add('driver',driver_obj)
         driver.stdout = 'dakota.out'
         driver.stderr = 'dakota.err'
@@ -43,6 +57,6 @@ class rosentest(Assembly):
         driver.add_parameter('rose.x2', low=-1.5, high=1.5)
         driver.add_objective('rose.f')
 
-# top = rosenTest()
-top = rosenDistTest()
+top = rosenTest()
+#top = rosenDistTest()
 top.run()

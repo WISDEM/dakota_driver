@@ -186,6 +186,7 @@ class DakotaBase(Driver):
         ######## 
         n_params = self.total_parameters()
         if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
+        else: ineq_constraints = False
         for key in self.input.method:
             if key == 'output': self.input.method[key] = self.output
             if key == 'max_iterations': self.input.method[key] = self.max_iterations
@@ -199,9 +200,12 @@ class DakotaBase(Driver):
             # optimization
             if key == 'conmin':
                 self.set_variables(need_start=True)
-                if ineq_constraints: self.input.method['conmin_mfd'] = ''
-                else: self.input.method['conmin_frcg'] = ''
-                self.input.method.pop(key)
+                if ineq_constraints: 
+                    conmeth = 'conmin_mfd'
+                else: 
+                     conmeth = 'conmin_frcg'
+                self.input.method = collections.OrderedDict([
+                     (conmeth, v) if k == key else (k, v) for k, v in self.input.method.items()])
 
             
             # parameter studies
@@ -220,7 +224,10 @@ class DakotaBase(Driver):
                                  ValueError)
                 final_point = [str(point) for point in self.final_point]
             if key == 'final_point': self.input.method[key] = ' '.join(final_point)
+            if key == 'step_vector': self.input.method[key] = ' '.join([str(s) for s in self.step_vector])
             if key == 'num_steps': self.input.method[key] = self.num_steps
+            if key == 'steps_per_variable': self.input.method[key] = self.steps_per_variable
+            if key == 'list_of_points': self.input.method[key] = '\n'.join(' '.join(str(j) for j in i) for i in self.list_of_points)
 
             if key == 'sample_type': self.input.method[key] = self.sample_type
             if key == 'samples': self.input.method[key] = self.samples
@@ -236,6 +243,7 @@ class DakotaBase(Driver):
         objectives = self.get_objectives()
         for key in self.input.responses:
             if key =='objective_functions': self.input.responses[key] = len(objectives)
+            if key =='response_functions': self.input.responses[key] = len(objectives)
             if key == 'nonlinear_inequality_constraints' :
                if ineq_constraints: self.input.responses[key] = ineq_constraints
                else: self.input.responses.pop(key)
@@ -509,7 +517,7 @@ class pydakdriver(DakotaBase):
          if method_source=='dakota':self.input.responses['method_source dakota']=''
          self.fd_gradient_step_size = '1e-5'
          self.interval_type = 'forward'
-         self.input.responses['interval_type'] = self.interval_type
+         self.input.responses['interval_type'] = ''
          self.input.responses['fd_gradient_step_size'] = self.fd_gradient_step_size
 
     def hessians(self):
@@ -519,7 +527,7 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='optpp_newton', interval_typer = 'forward'):
+    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward'):
         self.convergence_tolerance = '1.e-8'
         self.seed = _NOT_SET
         self.max_iterations = '200'
@@ -535,8 +543,9 @@ class pydakdriver(DakotaBase):
             self.analytical_gradients()
             self.hessians()
         if opt_type == 'efficient_global':
-            self.input.method["efficiency_global"] = ""
-            self.input.method["seed"] = seed
+            self.input.method["efficient_global"] = ""
+            self.input.method["seed"] = _NOT_SET
+            self.numerical_gradients()
         if opt_type == 'conmin':
             self.need_start=True           
 
@@ -545,9 +554,6 @@ class pydakdriver(DakotaBase):
             self.input.method['constraint_tolerance'] = '1.e-8'
 
             self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
-            if interval_type in ['central','forward']:
-               self.input.method['interval_type'+interval_type]=''
-            else: self.raise_exception('invalid interval_type'+str(interval_type), ValueError)
             self.numerical_gradients()
             
 
@@ -567,15 +573,15 @@ class pydakdriver(DakotaBase):
             self.input.method['multidim_parameter_study'] = ""
             self.input.method['partitions'] = _NOT_SET 
             self.partitions =  _NOT_SET
-        if study_type == 'list': #todo: specifiy instructions for set_variables  
-            self.input.method['list_parameter_study'] = "" # todo
-            self.input.method['list_of_points'] = _NOT_SET  # todo
-            self.input.responses['response_functions']=_NOT_SET  # todo: add responsens_not_objectives()
+        if study_type == 'list':
+            self.input.method['list_parameter_study'] = ""
+            self.input.method['list_of_points'] = _NOT_SET 
+            self.input.responses['response_functions']=_NOT_SET
         else: self.input.responses['objective_functions']=_NOT_SET 
-        if study_type == 'centered': #todo: specifiy instructions for set_variables
+        if study_type == 'centered':
             self.input.method['centered_parameter_study'] = ""
-            self.input.method['step_vector'] = _NOT_SET  # todo
-            self.input.method['steps_per_variable'] = _NOT_SET  # todo
+            self.input.method['step_vector'] = _NOT_SET
+            self.input.method['steps_per_variable'] = _NOT_SET
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 

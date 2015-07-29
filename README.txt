@@ -58,47 +58,57 @@ There are four main configuration types for pydakdriver - UQ, Parameter_study, O
                          along the coordinate axes of the parameter space. The user selects the number of steps 
                          and the step size.
                      configured with: 'step_vector', 'steps_per_variable'  
+
+       Option Descriptions
+       ------------------
        final_point
              description: 
-                defines the final values for each variable on the vector to be used in the vector parameter study
+                list which defines the final values for each variable on the vector to be used in the vector parameter study
                 (the initial points are defined values variables are set to using openmdao API)
        num_steps:
              description: number of steps to be taken from initial point to final point 
-       partitions: number of intervals for each parameter in multi-dim study
+       partitions: list describin number of intervals for each parameter in multi-dim study
        list_of_points: List of variable values to evaluate in a list parameter study
+                       Note: this is a "list of lists". ex: driver.list_of_points = [[2,3,4,5],[4,3,2,1]]
        step_vector: Number of sampling steps along the vector in parameter study
        steps_per_variable: Number of steps to take in each dimension of a centered parameter study
 ==================================================================================================
 ==================================================================================================
    Optimization
 ==================================================================================================
-       usage: pydakdrive.Optimization( opt_type='npsol_sqp', convergence_tolerance = '1.e-8', seed=__,
-                                       max_iterations=__, max_function_evaluations=__, interval_type = 'forward')
+       usage: pydakdrive.Optimization( opt_type='optpp_newton', interval_type = 'forward')
        description: optimize one or multiple objectives
        opt_type = type of optimization
+           defaults:
+              convergence_tolerance = 1.e-8, max_iterations = 200, max_function_evaluations = 2000
            options: 
-              'npsol_sqp'
-                   description: Sequential Quadratic Program
-                   configured with: 'convergence_tolerance'
+              'optpp_newton'
+                   description: Newton method based optimization
+                   Notes:
+                        Expects analytical gradients in provideJ. Numerical gradiants can be set using
+                        driver.numerical_gradients().
+                        Computes Numerical Hessians.
 
               'efficient_global'
-                   description: Global Surrogate Based Optimization
-                   configured with: 'seed'
+                   description: DAKOTA Global Optimization
+                   configured with: seed
  
               'conmin'
                    description:ONstrained function MINimization
                    configured with: 
-                         'max_iterations', 'max_function_evaluations', 'convergence_tolerance'
-                         'constraint_tolerance', 'interval_type'
+                         constraint_tolerance = 1.e-8
+
+       Option Descriptions
+       -------------------
        convergence_tolerance: Stopping criterion based on convergence of the objective function
        seed = random number generator seed
        max_iterations = Stopping criteria based on number of iterations (different than max_function_evaluations)
-       interval_type = Specifies how to compute gradients and hessians
+       constraint_tolerance: maximum allowable value of constraint violation still considered to be feasible
+
+       Configurations Functions
+       ----------------------- 
+       interval_type:
+             Specifies how to compute gradients and hessians 
+             options are 'forward', 'central'
 ==================================================================================================
 NOTES
-    * __ arguments must be set by the use for propper configuration, when those arguments are 
-     used to configure the desired mehtod
-    * function arguments other than <analysis>_type are objects and can be also be set after configuration.
-         ex.
-         pydakdriver.UQ(UQ_type='sampling', seed = 11241)
-         pydakdriver.samples = 1000 # (samples could have been specified in UQ function call)
