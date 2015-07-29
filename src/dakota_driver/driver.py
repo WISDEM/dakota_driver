@@ -574,7 +574,7 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_hessians']=''
 
     def UQ(self,UQ_type = 'sampling'):
-            self.sample_type =  'lhs'
+            self.sample_type =  'random' #'lhs'
             self.seed = _NOT_SET
             self.samples=100
             
