@@ -53,6 +53,7 @@ class DakotaBase(Driver):
         self.special_distribution_variables = []
         self.clear_special_variables()
 
+        self.configured = None
         # Set baseline input, don't touch 'interface'.
         self.input = DakotaInput(environment=[],
                                  method=[],
@@ -285,9 +286,11 @@ class DakotaBase(Driver):
             else: temp_list.append(key)
         self.input.responses = temp_list
 
+        self.configured = 1
+
     def execute(self):
         """ Write DAKOTA input and run. """
-        self.configure_input()
+        if not self.configured: self.configure_input() # this limits configuration to one time
         self.run_dakota()
 
     def set_variables(self, need_start, uniform=False, need_bounds=True):
@@ -324,6 +327,7 @@ class DakotaBase(Driver):
             )
         # ------------ special distributions cases ------- -------- #
         for var in self.special_distribution_variables:
+             if var in parameters: self.remove_parameter(var)
              self.add_parameter(var,low= -999, high = 999)
 
 
