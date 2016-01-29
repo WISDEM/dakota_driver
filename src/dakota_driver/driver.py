@@ -591,7 +591,7 @@ class pydakdriver(DakotaBase):
 
     def UQ(self,UQ_type = 'sampling'):
             self.sample_type =  'random' #'lhs'
-            self.seed = _NOT_SET
+            #self.seed = _NOT_SET
             self.samples=100
             
             if UQ_type == 'sampling':
@@ -601,7 +601,7 @@ class pydakdriver(DakotaBase):
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _NOT_SET
                 self.input.method['sample_type'] = _NOT_SET
-                self.input.method['seed'] = _NOT_SET
+                #self.input.method['seed'] = _NOT_SET
                 self.input.method['samples'] = _NOT_SET
         
                 self.input.responses = collections.OrderedDict()
