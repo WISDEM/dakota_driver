@@ -24,7 +24,7 @@ from openmdao.util.decorators import add_delegate
 __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
 
-_NOT_SET = "SPECIFICATION DECLARED BUT NOT DEFINED"
+_SET_AT_RUNTIME = "SPECIFICATION DECLARED BUT NOT DEFINED"
 
 
 @add_delegate(HasParameters, HasObjectives)
@@ -232,6 +232,15 @@ class DakotaBase(Driver):
 
             if key == 'sample_type': self.input.method[key] = self.sample_type
             if key == 'samples': self.input.method[key] = self.samples
+        
+            # surrogate model
+            if key == "surrogate": 
+               self.input.method["model_pointer"] = "'surr'\n"
+               self.input.method["method"] = "\n\t\tid_method 'dace'\n\t\tsampling\n\t\tsamples %i\n\t\tmodel_pointer 'sim'"%self.samples
+               self.input.model = ["id_model 'surr'", "surrogate global gaussian_process surfpack",
+                                "dace_method_pointer 'dace'\n", "model", "id_model 'sim'","\tsingle"]
+               self.input.method.pop(key)
+
         ########### 
        # variables #
         ########### 
@@ -261,7 +270,7 @@ class DakotaBase(Driver):
        # Verify that all input fields have been adressed #
         ##################################################
         def assignment_enforcemer(tag,val):
-             if val == _NOT_SET: raise ValueError(str(tag)+ " NOT DEFINED")
+             if val == _SET_AT_RUNTIME: raise ValueError(str(tag)+ " NOT DEFINED")
         for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
         for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
 
@@ -418,11 +427,11 @@ class DakotaBase(Driver):
        self.weibull_betas = []
        self.weibull_descriptors = []
 
-    def add_special_distribution(self, var, dist, alpha = _NOT_SET, beta = _NOT_SET, 
-                                 mean = _NOT_SET, std_dev = _NOT_SET,
-                                 lower_bounds = _NOT_SET, upper_bounds = _NOT_SET ):
+    def add_special_distribution(self, var, dist, alpha = _SET_AT_RUNTIME, beta = _SET_AT_RUNTIME, 
+                                 mean = _SET_AT_RUNTIME, std_dev = _SET_AT_RUNTIME,
+                                 lower_bounds = _SET_AT_RUNTIME, upper_bounds = _SET_AT_RUNTIME ):
         def check_set(option):
-            if option == _NOT_SET: raise ValueError("INCOMPLETE DEFINITION FOR VARIABLE "+str(var))
+            if option == _SET_AT_RUNTIME: raise ValueError("INCOMPLETE DEFINITION FOR VARIABLE "+str(var))
 
         if dist == 'normal':
             check_set(std_dev)
@@ -481,16 +490,10 @@ class DakotaBase(Driver):
 
         self.special_distribution_variables.append(var)
 
-#class DakotaOptimizer(DakotaBase):
-#    """ Base class for optimizers using the DAKOTA Python interface. """
-#    # Currently only a 'marker' class.
-##
-#    implements(IOptimizer)
-#
 ################################################################################
 ########################## Hierarchical Driver ################################
 class pydakdriver(DakotaBase):
-    implements(IOptimizer) # Not sure why this wasn't implemented everywhere....
+    implements(IOptimizer) # Not sure what this does
 
     def __init__(self):
         super(pydakdriver, self).__init__()
@@ -502,6 +505,19 @@ class pydakdriver(DakotaBase):
         self.uniform=False
         self.need_bounds=True
  
+    # How DAKOTA input file options are set:
+    #    1. user sets options either using function calls or setting objects 
+    #            The design allows both options to have the same effect
+    #            (These functions are shown below)
+    #    2. When the driver is run(), the self.input objects are searched and used to build input file
+    #            (This code is above)
+    #    - The items in self.input are stored as orderedDict so order matters
+    #    - If an object has '' as it's value, There is no corresponding value it is just a command (eg. no_gradients)
+    #    - If an object has _SET_AT_RUNTIME as it's value, then the user must set this. _SET_AT_RUNTIME is a placeholder
+    #      which allows the value to be set until runtime. if a key is associated with a value besides '' 
+    #      or _SET_AT_RUNTIME. the value is effectively hardwired.
+
+
     def analytical_gradients(self):
          self.interval_type = 'forward'
          self.fd_gradient_step_size = '1.e-4'
@@ -511,12 +527,11 @@ class pydakdriver(DakotaBase):
          self.input.responses['numerical_gradients'] = ''
          self.input.responses['method_source dakota'] = ''
          self.input.responses['interval_type'] = ''
-         self.input.responses['fd_gradient_step_size'] = _NOT_SET
+         self.input.responses['fd_gradient_step_size'] = self.fd_gradient_step_size
 
     def numerical_gradients(self, method_source='dakota'):
          for key in self.input.responses:
-             if key == 'no_gradients':
-                  self.input.responses.pop(key)
+             if key == 'no_gradients': self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          if method_source=='dakota':self.input.responses['method_source dakota']=''
          self.fd_gradient_step_size = '1e-5'
@@ -531,13 +546,13 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward'):
+    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False):
         self.convergence_tolerance = '1.e-8'
-        self.seed = _NOT_SET
+        self.seed = _SET_AT_RUNTIME
         self.max_iterations = '200'
         self.max_function_evaluations = '2000'
 
-        self.input.responses['objective_functions']=_NOT_SET
+        self.input.responses['objective_functions']=_SET_AT_RUNTIME
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
         if opt_type == 'optpp_newton':
@@ -548,7 +563,7 @@ class pydakdriver(DakotaBase):
             self.hessians()
         if opt_type == 'efficient_global':
             self.input.method["efficient_global"] = ""
-            self.input.method["seed"] = _NOT_SET
+            self.input.method["seed"] = _SET_AT_RUNTIME
             self.numerical_gradients()
         if opt_type == 'conmin':
             self.need_start=True           
@@ -557,9 +572,13 @@ class pydakdriver(DakotaBase):
             self.input.method["output"] = ''
             self.input.method['constraint_tolerance'] = '1.e-8'
 
-            self.input.responses['nonlinear_inequality_constraints'] = _NOT_SET
+            self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
             self.numerical_gradients()
             
+        if surrogate_model: 
+            self.input.method["surrogate"] = _SET_AT_RUNTIME
+            self.samples = 100
+            #self.input.interface.append("\tfork")
 
     def Parameter_Study(self,study_type = 'vector'):
         self.study_type = study_type
@@ -568,30 +587,30 @@ class pydakdriver(DakotaBase):
             self.need_bounds=False
             # why was this false? legacy was self.set_variables(need_start=False, need_bounds=False)
             self.input.method['vector_parameter_study'] = ""
-            self.input.method['final_point'] = _NOT_SET 
-            self.input.method['num_steps'] = _NOT_SET 
-            self.final_point = _NOT_SET
-            self.num_steps = _NOT_SET
+            self.input.method['final_point'] = _SET_AT_RUNTIME 
+            self.input.method['num_steps'] = _SET_AT_RUNTIME 
+            self.final_point = _SET_AT_RUNTIME
+            self.num_steps = _SET_AT_RUNTIME
         if study_type == 'multi-dim':
             self.need_start=False
             self.input.method['multidim_parameter_study'] = ""
-            self.input.method['partitions'] = _NOT_SET 
-            self.partitions =  _NOT_SET
+            self.input.method['partitions'] = _SET_AT_RUNTIME 
+            self.partitions =  _SET_AT_RUNTIME
         if study_type == 'list':
             self.input.method['list_parameter_study'] = ""
-            self.input.method['list_of_points'] = _NOT_SET 
-            self.input.responses['response_functions']=_NOT_SET
-        else: self.input.responses['objective_functions']=_NOT_SET 
+            self.input.method['list_of_points'] = _SET_AT_RUNTIME 
+            self.input.responses['response_functions']=_SET_AT_RUNTIME
+        else: self.input.responses['objective_functions']=_SET_AT_RUNTIME 
         if study_type == 'centered':
             self.input.method['centered_parameter_study'] = ""
-            self.input.method['step_vector'] = _NOT_SET
-            self.input.method['steps_per_variable'] = _NOT_SET
+            self.input.method['step_vector'] = _SET_AT_RUNTIME
+            self.input.method['steps_per_variable'] = _SET_AT_RUNTIME
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
     def UQ(self,UQ_type = 'sampling'):
             self.sample_type =  'random' #'lhs'
-            #self.seed = _NOT_SET
+            #self.seed = _SET_AT_RUNTIME
             self.samples=100
             
             if UQ_type == 'sampling':
@@ -599,14 +618,14 @@ class pydakdriver(DakotaBase):
                 self.uniform = True
                 self.input.method = collections.OrderedDict()
                 self.input.method['sampling'] = ''
-                self.input.method['output'] = _NOT_SET
-                self.input.method['sample_type'] = _NOT_SET
-                #self.input.method['seed'] = _NOT_SET
-                self.input.method['samples'] = _NOT_SET
+                self.input.method['output'] = _SET_AT_RUNTIME
+                self.input.method['sample_type'] = _SET_AT_RUNTIME
+                #self.input.method['seed'] = _SET_AT_RUNTIME
+                self.input.method['samples'] = _SET_AT_RUNTIME
         
                 self.input.responses = collections.OrderedDict()
-                self.input.responses['num_response_functions'] = _NOT_SET
-                self.input.responses['response_descriptors'] = _NOT_SET
+                self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
+                self.input.responses['response_descriptors'] = _SET_AT_RUNTIME
             self.input.responses['no_gradients'] = ''
             self.input.responses['no_hessians'] = ''
 ################################################################################
