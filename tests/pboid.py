@@ -45,12 +45,12 @@ root.add('p', Paraboloid())
 root.connect('p1.x', 'p.x')
 root.connect('p2.y', 'p.y')
 
-#drives = pydakdriver()
-#drives.Optimization()
+drives = pydakdriver()
+drives.Optimization()
 #drives.UQ()
-#top.driver = drives
-top.driver = ScipyOptimizer()
-top.driver.options['optimizer'] = 'SLSQP'
+top.driver = drives
+#top.driver = ScipyOptimizer()
+#top.driver.options['optimizer'] = 'SLSQP'
 
 top.driver.add_desvar('p1.x', lower=-50, upper=50)
 top.driver.add_desvar('p2.y', lower=-50, upper=50)
