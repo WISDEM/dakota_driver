@@ -12,22 +12,34 @@ import collections
 
 from dakota import DakotaInput, run_dakota
 
-from openmdao.main.datatypes.api import Bool, Enum, Float, Int, List, Str
-from openmdao.main.driver import Driver
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasconstraints import HasIneqConstraints
-from openmdao.main.hasobjective import HasObjectives
-from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
-                                     IHasObjectives, IOptimizer, implements
-from openmdao.util.decorators import add_delegate
+from openmdao.core.driver import Driver
+from openmdao.util.record_util import create_local_meta, update_local_meta
+#from openmdao.main.hasparameters import HasParameters
+#from openmdao.main.hasconstraints import HasIneqConstraints
+#from openmdao.main.hasobjective import HasObjectives
+#from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
+#                                     IHasObjectives, IOptimizer, implements
+#from openmdao.util.decorators import add_delegate
 
 __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
 
 _SET_AT_RUNTIME = "SPECIFICATION DECLARED BUT NOT DEFINED"
 
+import inspect
+import sys
+def get_my_name(self):
+    ans = []
+    frame = inspect.currentframe().f_back
+    tmp = dict(frame.f_globals.items() + frame.f_locals.items())
+    for k, var in tmp.items():
+        if isinstance(var, self.__class__):
+            if hash(self) == hash(var):
+                ans.append(k)
+    return '.'.join(ans)
 
-@add_delegate(HasParameters, HasObjectives)
+
+#@add_delegate(HasParameters, HasObjectives)
 class DakotaBase(Driver):
     """
     Base class for common DAKOTA operations, adds :class:`DakotaInput` instance.
@@ -36,15 +48,15 @@ class DakotaBase(Driver):
     section.
     """
 
-    implements(IHasParameters, IHasObjectives)
+#    implements(IHasParameters, IHasObjectives)
 
-    output = Enum('normal', iotype='in', desc='Output verbosity',
-                  values=('silent', 'quiet', 'normal', 'verbose', 'debug'))
-    stdout = Str('', iotype='in', desc='DAKOTA stdout filename')
-    stderr = Str('', iotype='in', desc='DAKOTA stderr filename')
-    tabular_graphics_data = \
-             Bool(iotype='in',
-                  desc="Record evaluations to 'dakota_tabular.dat'")
+    output = 'normal',
+    #output = Enum('normal', iotype='in', desc='Output verbosity',
+    #              values=('silent', 'quiet', 'normal', 'verbose', 'debug'))
+    stdout = ''
+    stderr = ''
+    tabular_graphics_data = True
+            
 
     def __init__(self):
         super(DakotaBase, self).__init__()
@@ -79,7 +91,8 @@ class DakotaBase(Driver):
         tabular graphics data in the ``environment`` section.
         DAKOTA will then call our :meth:`dakota_callback` during the run.
         """
-        parameters = self.get_parameters()
+        #parameters = self.get_parameters()
+        parameters = self._desvars
         if not parameters:
             self.raise_exception('No parameters, run aborted', ValueError)
 
@@ -100,14 +113,21 @@ class DakotaBase(Driver):
             if self.tabular_graphics_data:
                 self.input.environment.append('tabular_graphics_data')
 
-        infile = self.get_pathname() + '.in'
+        #infile = self.get_pathname() + '.in'
+        infile = get_my_name(self) + '.in'
         self.input.write_input(infile, data=self)
-        try:
-            run_dakota(infile, stdout=self.stdout, stderr=self.stderr)
-        except Exception:
-            self.reraise_exception()
+        run_dakota(infile, stdout=self.stdout, stderr=self.stderr)
+        #try:
+        #    run_dakota(infile, stdout=self.stdout, stderr=self.stderr)
+        #except Exception:
+        #    print sys.exc_info()
+        #    exc_type, exc_value, exc_traceback = sys.exc_info()
+        #    raise type('%s' % exc_type), exc_value, exc_traceback
+
+           # self.reraise_exception()
 
     def dakota_callback(self, **kwargs):
+        print 'HELLO'
         """
         Return responses from parameters.  `kwargs` contains:
 
@@ -144,29 +164,37 @@ class DakotaBase(Driver):
         """
         cv = kwargs['cv']
         asv = kwargs['asv']
-        self._logger.debug('cv %s', cv)
-        self._logger.debug('asv %s', asv)
+        #self._logger.debug('cv %s', cv)
+        #self._logger.debug('asv %s', asv)
 
-        self.set_parameters(cv)
-        self.run_iteration()
+        for i, var  in enumerate(self._desvars.keys()):
+            print i, cv
+            self.set_desvar(var, cv[i])
+        #self.set_parameters(cv)
+        #self.run_iteration()
+        system = self.root
+        with system._dircontext:
+            system.solve_nonlinear()
 
-        expressions = self.get_objectives().values()
+        expressions = self.get_objectives()#.values()
+        print 'expr',expressions
         if hasattr(self, 'get_eq_constraints'):
-            expressions.extend(self.get_eq_constraints().values())
+            expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
             expressions.extend(self.get_ineq_constraints().values())
 
         fns = []
         fnGrads = []
-        for i, expr in enumerate(expressions):
+        for i, val in enumerate(expressions.values()):
             if asv[i] & 1:
-                val = expr.evaluate(self.parent)
-                if isinstance(val, list):
-                    fns.extend(val)
-                else:
-                    fns.append(val)
+                #val = expr.evaluate(self.parent)
+                #if isinstance(val, list):
+                #if isinstance(val, array):
+                fns.extend(val)
+                #else:
+                #    fns.append(val)
             if asv[i] & 2:
-               val = expr.evaluate_gradient(self.parent)
+               #val = expr.evaluate_gradient(self.parent)
                fnGrads.append(val)
                # self.raise_exception('Gradients not supported yet',
                #                      NotImplementedError)
@@ -175,21 +203,23 @@ class DakotaBase(Driver):
                                      NotImplementedError)
 
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
-        self._logger.debug('returning %s', retval)
+        #self._logger.debug('returning %s', retval)
+        print 'BYE',retval
         return retval
 
 
-    def configure_input(self):
+    def configure_input(self, problem):
         """ Configures input specification, must be overridden. """
 
         ######## 
        # method #
         ######## 
-        n_params = self.total_parameters()
+        print 'yo! ps are ',self._desvars
+        n_params = len(self._desvars.keys())
         if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
         else: ineq_constraints = False
         for key in self.input.method:
-            if key == 'output': self.input.method[key] = self.output
+            if key == 'output': self.input.method[key] = self.output[0]
             if key == 'max_iterations': self.input.method[key] = self.max_iterations
             if key == 'max_function_evaluations': self.input.method[key] = self.max_function_evaluations
             if key == 'convergence_tolerance': self.input.method[key] = self.convergence_tolerance
@@ -297,42 +327,53 @@ class DakotaBase(Driver):
 
         self.configured = 1
 
-    def execute(self):
+    #def execute(self):
+    def run(self, problem):
+        print 'RUNNING DAK'
         """ Write DAKOTA input and run. """
-        if not self.configured: self.configure_input() # this limits configuration to one time
+        if not self.configured: self.configure_input(problem) # this limits configuration to one time
         self.run_dakota()
 
     def set_variables(self, need_start, uniform=False, need_bounds=True):
         """ Set :class:`DakotaInput` ``variables`` section. """
 
-        parameters = self.get_parameters()
+        parameters = self._desvars
+        print 'hey! ps are ',parameters
+        #parameters = self.get_parameters()
         if parameters:
             if uniform:
                 self.input.variables = [
-                    'uniform_uncertain = %s' % self.total_parameters()]
+                    'uniform_uncertain = %s' % len(parameters.keys())]
+                    #'uniform_uncertain = %s' % self.total_parameters()]
             else:
                 self.input.variables = [
-                    'continuous_design = %s' % self.total_parameters()]
+                    'continuous_design = %s' % len(parameters.keys())]
+                    #'continuous_design = %s' % self.total_parameters()]
     
             if need_start:
-                initial = [str(val) for val in self.eval_parameters(dtype=None)]
+                print 'yo,',self.get_desvars()
+                initial = [str(val[0]) for val in self.get_desvars().values()]
+                #initial = [str(val) for val in self.eval_parameters(dtype=None)]
                 self.input.variables.append(
                     '  initial_point %s' % ' '.join(initial))
     
             if need_bounds:
-                lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
-                ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
+                #lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
+                #ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
+                lbounds = [str(val['lower']) for val in parameters.values()]
+                ubounds = [str(val['upper']) for val in parameters.values()]
                 self.input.variables.extend([
                     '  lower_bounds %s' % ' '.join(lbounds),
                     '  upper_bounds %s' % ' '.join(ubounds)])
     
-            names = []
-            for param in parameters.values():
-                for name in param.names:
-                    names.append('%r' % name)
+            names = parameters.keys()
+            #names = []
+            #for param in parameters.values():
+            #    for name in param.names:
+            #        names.append('%r' % name)
     
             self.input.variables.append(
-                '  descriptors  %s' % ' '.join(names)
+                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names)
             )
         # ------------ special distributions cases ------- -------- #
         for var in self.special_distribution_variables:
@@ -493,7 +534,7 @@ class DakotaBase(Driver):
 ################################################################################
 ########################## Hierarchical Driver ################################
 class pydakdriver(DakotaBase):
-    implements(IOptimizer) # Not sure what this does
+    #implements(IOptimizer) # Not sure what this does
 
     def __init__(self):
         super(pydakdriver, self).__init__()
