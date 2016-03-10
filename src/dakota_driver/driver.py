@@ -14,6 +14,7 @@ from dakota import DakotaInput, run_dakota
 
 from openmdao.core.driver import Driver
 from openmdao.util.record_util import create_local_meta, update_local_meta
+#import sys
 #from openmdao.main.hasparameters import HasParameters
 #from openmdao.main.hasconstraints import HasIneqConstraints
 #from openmdao.main.hasobjective import HasObjectives
@@ -25,18 +26,6 @@ __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
 
 _SET_AT_RUNTIME = "SPECIFICATION DECLARED BUT NOT DEFINED"
-
-import inspect
-import sys
-def get_my_name(self):
-    ans = []
-    frame = inspect.currentframe().f_back
-    tmp = dict(frame.f_globals.items() + frame.f_locals.items())
-    for k, var in tmp.items():
-        if isinstance(var, self.__class__):
-            if hash(self) == hash(var):
-                ans.append(k)
-    return '.'.join(ans)
 
 
 #@add_delegate(HasParameters, HasObjectives)
@@ -64,7 +53,7 @@ class DakotaBase(Driver):
         # allow for special variable distributions
         self.special_distribution_variables = []
         self.clear_special_variables()
-
+ 
         self.configured = None
         # Set baseline input, don't touch 'interface'.
         self.input = DakotaInput(environment=[],
@@ -114,7 +103,7 @@ class DakotaBase(Driver):
                 self.input.environment.append('tabular_graphics_data')
 
         #infile = self.get_pathname() + '.in'
-        infile = get_my_name(self) + '.in'
+        infile = self.name+ '.in'
         self.input.write_input(infile, data=self)
         run_dakota(infile, stdout=self.stdout, stderr=self.stderr)
         #try:
@@ -536,7 +525,7 @@ class DakotaBase(Driver):
 class pydakdriver(DakotaBase):
     #implements(IOptimizer) # Not sure what this does
 
-    def __init__(self):
+    def __init__(self, name=None):
         super(pydakdriver, self).__init__()
         self.input.method = collections.OrderedDict()
         self.input.responses = collections.OrderedDict()
@@ -546,6 +535,9 @@ class pydakdriver(DakotaBase):
         self.uniform=False
         self.need_bounds=True
  
+        if name: self.name = name
+        else: self.name = 'dakota_'+str(id(self))
+
     # How DAKOTA input file options are set:
     #    1. user sets options either using function calls or setting objects 
     #            The design allows both options to have the same effect

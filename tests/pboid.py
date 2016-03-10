@@ -45,7 +45,7 @@ root.add('p', Paraboloid())
 root.connect('p1.x', 'p.x')
 root.connect('p2.y', 'p.y')
 
-drives = pydakdriver()
+drives = pydakdriver(name = 'top.driver')
 drives.Optimization()
 #drives.UQ()
 top.driver = drives
