@@ -2,6 +2,7 @@ from dakota_driver.driver import pydakdriver
 from openmdao.main.api import Component, Assembly
 from openmdao.lib.drivers.api import SLSQPdriver, CONMINdriver, Genetic, COBYLAdriver, NEWSUMTdriver
 from openmdao.lib.datatypes.api import Float
+import unittest
 
 dacout = 'dakota.out'
 
@@ -72,6 +73,11 @@ class outer_opt(Assembly):
         self.connect('x1', ['roseSA.x1', 'dakBak.x1'])
         self.driver.add_objective('dakBak.mean_f')
 
-top = outer_opt()
-top.run()
-print top.x1
+class TestOUU(unittest.TestCase):
+    def test(self):
+        top = outer_opt()
+        top.run()
+        self.assertTrue(top.x1-0.33 < 0.01)
+
+if __name__ == '__main__':
+    unittest.main()
