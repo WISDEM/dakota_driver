@@ -116,7 +116,6 @@ class DakotaBase(Driver):
            # self.reraise_exception()
 
     def dakota_callback(self, **kwargs):
-        print 'HELLO'
         """
         Return responses from parameters.  `kwargs` contains:
 
@@ -157,7 +156,6 @@ class DakotaBase(Driver):
         #self._logger.debug('asv %s', asv)
 
         for i, var  in enumerate(self._desvars.keys()):
-            print i, cv
             self.set_desvar(var, cv[i])
         #self.set_parameters(cv)
         #self.run_iteration()
@@ -166,7 +164,6 @@ class DakotaBase(Driver):
             system.solve_nonlinear()
 
         expressions = self.get_objectives()#.values()
-        print 'expr',expressions
         if hasattr(self, 'get_eq_constraints'):
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
@@ -193,7 +190,6 @@ class DakotaBase(Driver):
 
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
         #self._logger.debug('returning %s', retval)
-        print 'BYE',retval
         return retval
 
 
@@ -203,7 +199,6 @@ class DakotaBase(Driver):
         ######## 
        # method #
         ######## 
-        print 'yo! ps are ',self._desvars
         n_params = len(self._desvars.keys())
         if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
         else: ineq_constraints = False
@@ -319,7 +314,6 @@ class DakotaBase(Driver):
 
     #def execute(self):
     def run(self, problem):
-        print 'RUNNING DAK'
         """ Write DAKOTA input and run. """
         if not self.configured: self.configure_input(problem) # this limits configuration to one time
         self.run_dakota()
@@ -330,14 +324,11 @@ class DakotaBase(Driver):
         dvars = self.get_desvars()
         parameters = [] # [ [name, value], ..]
         for param in dvars.keys():
-            print dvars[param]
             if len( dvars[param]) == 1:
                 parameters.append( [param, dvars[param][0]])
             else:
-                print dvars[param]
                 for i, val in enumerate(dvars[param]):
                     parameters.append([param+str(i+1),val])
-        print 'hey! ps are ',parameters
         #parameters = self.get_parameters()
         if parameters:
             if uniform:
@@ -350,7 +341,6 @@ class DakotaBase(Driver):
                     #'continuous_design = %s' % self.total_parameters()]
     
             if need_start:
-                print 'yo,',self.get_desvars()
                 #initial = [str(val[0] for val in self.get_desvars().values()]
                 initial = []
                 for val in self.get_desvars().values():
@@ -451,7 +441,6 @@ class DakotaBase(Driver):
        for var in self.special_distribution_variables:
           try: self.remove_parameter(var)
           except AttributeError:
-             print var +' is being cleared but its not declared'
              pass
        self.special_distribution_variables = []
 
@@ -578,7 +567,7 @@ class pydakdriver(DakotaBase):
 
     def analytical_gradients(self):
          self.interval_type = 'forward'
-         self.fd_gradient_step_size = '1.e-4'
+         self.fd_gradient_step_size = '1.e-6'
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
@@ -592,7 +581,7 @@ class pydakdriver(DakotaBase):
              if key == 'no_gradients': self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          if method_source=='dakota':self.input.responses['method_source dakota']=''
-         self.fd_gradient_step_size = '1e-5'
+         self.fd_gradient_step_size = '1e-8'
          self.interval_type = 'forward'
          self.input.responses['interval_type'] = ''
          self.input.responses['fd_gradient_step_size'] = self.fd_gradient_step_size
@@ -609,7 +598,6 @@ class pydakdriver(DakotaBase):
         self.seed = _SET_AT_RUNTIME
         self.max_iterations = '200'
         self.max_function_evaluations = '2000'
-        self.fd_gradient_step_size = 1e-6
 
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
         self.input.responses['no_gradients'] = ''
