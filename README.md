@@ -12,7 +12,7 @@ import driver using:
 
     from dakota_driver.driver import pydakdriver
 
-## Example Usage:
+## Example Usage
     driver = self.add('driver',pydakdriver())
     driver.UQ()
     driver.samples = 2000
@@ -21,6 +21,10 @@ import driver using:
 
     driver.add_special_distribution('lcoe_se.A', 'normal',  mean = 10, std_dev = 1)
     driver.add_parameter('lcoe_se.k',low = 0.3, high = 3)
+
+## Unit Tests
+    python tests/ouu_test.py 
+    tests/pydaktest.py 
 
 ## There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
 ==================================================================================================
