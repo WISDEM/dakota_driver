@@ -10,7 +10,7 @@ the succesful installation of pyDAKOTA
 
 import driver using:
 
-    `from dakota_driver.driver import pydakdriver`
+    from dakota_driver.driver import pydakdriver
 
 ## Example Usage:
     driver = self.add('driver',pydakdriver())
