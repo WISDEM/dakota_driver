@@ -212,6 +212,7 @@ class DakotaBase(Driver):
             if key == 'max_iterations': self.input.method[key] = self.max_iterations
             if key == 'max_function_evaluations': self.input.method[key] = self.max_function_evaluations
             if key == 'convergence_tolerance': self.input.method[key] = self.convergence_tolerance
+            if key == 'fd_gradient_step_size': self.input.method[key] = self.fd_gradient_step_size
             if key == 'constraint_tolerance': 
                if ineq_constraints: self.input.method[key] = self.constraint_tolerance
                else: self.input.method.pop(key) 
@@ -326,36 +327,60 @@ class DakotaBase(Driver):
     def set_variables(self, need_start, uniform=False, need_bounds=True):
         """ Set :class:`DakotaInput` ``variables`` section. """
 
-        parameters = self._desvars
+        dvars = self.get_desvars()
+        parameters = [] # [ [name, value], ..]
+        for param in dvars.keys():
+            print dvars[param]
+            if len( dvars[param]) == 1:
+                parameters.append( [param, dvars[param][0]])
+            else:
+                print dvars[param]
+                for i, val in enumerate(dvars[param]):
+                    parameters.append([param+str(i+1),val])
         print 'hey! ps are ',parameters
         #parameters = self.get_parameters()
         if parameters:
             if uniform:
                 self.input.variables = [
-                    'uniform_uncertain = %s' % len(parameters.keys())]
+                    'uniform_uncertain = %s' % len(parameters)]
                     #'uniform_uncertain = %s' % self.total_parameters()]
             else:
                 self.input.variables = [
-                    'continuous_design = %s' % len(parameters.keys())]
+                    'continuous_design = %s' % len(parameters)]
                     #'continuous_design = %s' % self.total_parameters()]
     
             if need_start:
                 print 'yo,',self.get_desvars()
-                initial = [str(val[0]) for val in self.get_desvars().values()]
+                #initial = [str(val[0] for val in self.get_desvars().values()]
+                initial = []
+                for val in self.get_desvars().values():
+                    if isinstance(val, collections.Iterable):
+                        initial.extend(val)
+                    else: initial.append(val)
                 #initial = [str(val) for val in self.eval_parameters(dtype=None)]
                 self.input.variables.append(
-                    '  initial_point %s' % ' '.join(initial))
+                    '  initial_point %s' % ' '.join(str(s) for s in initial))
     
             if need_bounds:
                 #lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
                 #ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
-                lbounds = [str(val['lower']) for val in parameters.values()]
-                ubounds = [str(val['upper']) for val in parameters.values()]
+                lbounds = []
+                for val in self._desvars.values():
+                    if isinstance(val["lower"], collections.Iterable):
+                        lbounds.extend(val["lower"])
+                    else: lbounds.append(val["lower"])
+                #lbounds = [str(val['lower']) for val in parameters.values()]
+                #ubounds = [str(val['upper']) for val in parameters.values()]
+                ubounds = []
+                for val in self._desvars.values():
+                    if isinstance(val["upper"], collections.Iterable):
+                        ubounds.extend(val["upper"])
+                    else: ubounds.append(val["upper"])
                 self.input.variables.extend([
-                    '  lower_bounds %s' % ' '.join(lbounds),
-                    '  upper_bounds %s' % ' '.join(ubounds)])
+                    '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
+                    '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
     
-            names = parameters.keys()
+            names = [s[0] for s in parameters]
             #names = []
             #for param in parameters.values():
             #    for name in param.names:
@@ -584,6 +609,7 @@ class pydakdriver(DakotaBase):
         self.seed = _SET_AT_RUNTIME
         self.max_iterations = '200'
         self.max_function_evaluations = '2000'
+        self.fd_gradient_step_size = 1e-6
 
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
         self.input.responses['no_gradients'] = ''
