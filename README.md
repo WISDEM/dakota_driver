@@ -25,7 +25,7 @@ import driver using:
 ## There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
 ==================================================================================================
 
-While some parameters can only be set through function calls (listed in `arguments`), all paramteters can be set using `options`. Because of this, `arguments` are not listed as `options`. However, these paramters still can be set using objects in the same fasion as the listed `options`, unless otherwise noted.
+While some parameters can only be set through function calls (listed in `arguments`), all paramteters can be set using objects as listed in `options`. Because of this, `arguments` are not listed as `options`. However, these paramters still can be set using objects in the same fasion as the listed `options`, unless otherwise noted. Additionally, configuration functions are listed. The functions are either broad convinience functions, or the only way available to set a specific paramter.
 
 ### UQ  ( Uncertainty Quantification )
 
@@ -110,6 +110,9 @@ While some parameters can only be set through function calls (listed in `argumen
                    description:ONstrained function MINimization
                    configured with:
                          constraint_tolerance = 1.e-8
+       interval_type:
+             Specifies how to compute gradients and hessians
+             options are 'forward', 'central'
 
        Option Descriptions
        -------------------
@@ -117,12 +120,6 @@ While some parameters can only be set through function calls (listed in `argumen
        seed = random number generator seed
        max_iterations = Stopping criteria based on number of iterations (different than max_function_evaluations)
        constraint_tolerance: maximum allowable value of constraint violation still considered to be feasible
-
-       Configurations Functions
-       -----------------------
-       interval_type:
-             Specifies how to compute gradients and hessians
-             options are 'forward', 'central'
 ==================================================================================================
 Notes for Future Development
 ----------------------------
