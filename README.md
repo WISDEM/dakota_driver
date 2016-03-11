@@ -24,7 +24,7 @@ import driver using:
 
 ## Unit Tests
     python tests/ouu_test.py 
-    tests/pydaktest.py 
+    python tests/pydaktest.py 
 
 ## There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
 ==================================================================================================
