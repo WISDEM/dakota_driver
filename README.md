@@ -3,14 +3,14 @@
 
 An OpenMDAO driver allowing access to DAKOTA.
 
-To view the Sphinx documentation for this distribution, type:
-plugin docs dakota_driver
+To view the Sphinx documentation for this distribution, type: `plugin docs dakota_driver` (currently not implemented)
 
 This can be installed using `plugin install` in an openmdao environment after
 the succesful installation of pyDAKOTA
 
 import driver using:
-    from dakota_driver.driver import pydakdriver
+
+    `from dakota_driver.driver import pydakdriver`
 
 ## Example Usage:
     driver = self.add('driver',pydakdriver())
