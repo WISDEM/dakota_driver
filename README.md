@@ -3,8 +3,6 @@
 
 An OpenMDAO driver allowing access to DAKOTA.
 
-To view the Sphinx documentation for this distribution, type: `plugin docs dakota_driver` (currently not implemented)
-
 This can be installed using `plugin install` in an openmdao environment after
 the succesful installation of pyDAKOTA
 
