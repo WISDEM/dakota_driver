@@ -29,7 +29,9 @@ import driver using:
 ## There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
 ==================================================================================================
 
-While some parameters can only be set through function calls (listed in `arguments`), all paramteters can be set using objects as listed in `options`. Because of this, `arguments` are not listed as `options`. However, these paramters still can be set using objects in the same fasion as the listed `options`, unless otherwise noted. Additionally, configuration functions are listed. The functions are either broad convinience functions, or the only way available to set a specific paramter.
+There is no default setting of the pydakdriver. One of these configuration functions must be called.
+
+While some parameters can only be set through configuration function calls (listed in `arguments`), all paramteters can be set using objects as listed in `options`. Because of this, `arguments` are not listed as `options`. However, these paramters still can be set using objects in the same fasion as the listed `options`, unless otherwise noted. Additionally, configuration functions are listed. The functions are either broad convinience functions, or the only way available to set a specific paramter.
 
 ### UQ  ( Uncertainty Quantification )
 
