@@ -347,6 +347,10 @@ class DakotaBase(Driver):
                 '  std_deviations  %s' % ' '.join(self.normal_std_devs),
                 "  descriptors  '%s'" % "' '".join(self.normal_descriptors)
                 ])
+        if self.normal_lower_bounds: self.input.variables.extend(
+                 ['  lower_bounds %s' % ' '.join(str(s) for s in self.normal_lower_bounds)])
+        if self.normal_upper_bounds: self.input.variables.extend(
+                 ['  upper_bounds %s' % ' '.join(str(s) for s in self.normal_upper_bounds)])
                    
         if self.lognormal_descriptors:
             self.input.variables.extend([
@@ -403,8 +407,8 @@ class DakotaBase(Driver):
        self.normal_means = []
        self.normal_std_devs = []
        self.normal_descriptors = []
-       #normal_lower_bounds = []
-       #normal_upper_bounds = []
+       self.normal_upper_bounds = []
+       self.normal_lower_bounds = []
    
        self.lognormal_means= []
        self.lognormal_std_devs = []
@@ -429,17 +433,19 @@ class DakotaBase(Driver):
 
     def add_special_distribution(self, var, dist, alpha = _SET_AT_RUNTIME, beta = _SET_AT_RUNTIME, 
                                  mean = _SET_AT_RUNTIME, std_dev = _SET_AT_RUNTIME,
-                                 lower_bounds = _SET_AT_RUNTIME, upper_bounds = _SET_AT_RUNTIME ):
+                                 low = None, high = None):
         def check_set(option):
             if option == _SET_AT_RUNTIME: raise ValueError("INCOMPLETE DEFINITION FOR VARIABLE "+str(var))
 
         if dist == 'normal':
             check_set(std_dev)
             check_set(mean)
+            if low: self.normal_lower_bounds.append(str(low))
+            if high: self.normal_upper_bounds.append(str(high))
            # check_set(lower_bounds)
            # check_set(upper_bounds)
-          #  self.normal_lower_bounds.append(str(lower_bounds))
-          #  self.normal_upper_bounds.append(str(upper_bounds))
+            #self.normal_lower_bounds.append(str(lower_bounds))
+            #self.normal_upper_bounds.append(str(upper_bounds))
             self.normal_means.append(str(mean))
             self.normal_std_devs.append(str(std_dev))
             self.normal_descriptors.append(var)
