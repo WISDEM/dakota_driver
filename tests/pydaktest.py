@@ -1,6 +1,8 @@
 from dakota_driver.driver import pydakdriver
 from openmdao.main.api import Component, Assembly
 from openmdao.lib.datatypes.api import Float
+import unittest
+
 class rosen(Component):
     x1 = Float(0.0, iotype='in', desc = 'The variable x1' )
     x2 = Float(0.0, iotype='in', desc = 'The variable x2' )
@@ -46,7 +48,7 @@ class rosenOptTest(Assembly):
     def configure(self):
         self.add('rose', rosen())
         driver_obj = pydakdriver()
-        driver_obj.Optimization(opt_type='conmin', surrogate_model=True)
+        driver_obj.Optimization(opt_type='conmin', surrogate_model=False)
         driver = self.add('driver',driver_obj)
         driver.stdout = 'dakotaOPT.out'
         driver.stderr = 'dakotaOPT.err'
@@ -55,9 +57,27 @@ class rosenOptTest(Assembly):
         driver.add_parameter('rose.x2', low=-1.5, high=1.5)
         driver.add_objective('rose.f')
 
+<<<<<<< HEAD
 top = rosenTest()
 top.run()
 top = rosenDistTest()
 top.run()
 top = rosenOptTest()
 top.run()
+=======
+class RoseTest(unittest.TestCase):
+    def pstudy(self):
+        top = rosenTest()
+        top.run()
+        self.assertTrue(top.rose.x2 == 0.9)
+    def opt_test(self):
+        top = rosenOptTest()
+        top.run()
+        self.assertTrue(top.rose.x1 - 0.9956 < 0.02)
+
+if __name__ == '__main__':
+    top = rosenDistTest()
+    top.run()
+    unittest.main()
+
+>>>>>>> 526884e9272f036174a371a08d3895b9ee4a15a6
