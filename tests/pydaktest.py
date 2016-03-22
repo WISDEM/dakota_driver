@@ -56,8 +56,8 @@ class rosenOptTest(Assembly):
         driver.add_objective('rose.f')
 
 top = rosenTest()
-#top.run()
+top.run()
 top = rosenDistTest()
-#top.run()
+top.run()
 top = rosenOptTest()
 top.run()
