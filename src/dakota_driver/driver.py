@@ -232,6 +232,9 @@ class DakotaBase(Driver):
 
             if key == 'sample_type': self.input.method[key] = self.sample_type
             if key == 'samples': self.input.method[key] = self.samples
+            if key == 'quasi_sample_type': 
+                self.input.method[self.quasi_sample_type] = ''
+                self.input.method.pop(key)
         
             # surrogate model
             if key == "surrogate": 
@@ -614,14 +617,17 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
-    def UQ(self,UQ_type = 'sampling'):
+    def UQ(self,UQ_type = 'quasi'):
             self.sample_type =  'random' #'lhs'
             #self.seed = _SET_AT_RUNTIME
+            self.input.responses = collections.OrderedDict()
+            self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
+            self.input.responses['response_descriptors'] = _SET_AT_RUNTIME
             self.samples=100
+            self.need_start = False
+            self.uniform = True
             
             if UQ_type == 'sampling':
-                self.need_start = False
-                self.uniform = True
                 self.input.method = collections.OrderedDict()
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _SET_AT_RUNTIME
@@ -629,9 +635,12 @@ class pydakdriver(DakotaBase):
                 #self.input.method['seed'] = _SET_AT_RUNTIME
                 self.input.method['samples'] = _SET_AT_RUNTIME
         
-                self.input.responses = collections.OrderedDict()
-                self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
-                self.input.responses['response_descriptors'] = _SET_AT_RUNTIME
+            if UQ_type == 'quasi':
+                self.input.method['fsu_quasi_mc'] = ''
+                self.quasi_sample_type = "halton"
+                self.input.method['quasi_sample_type'] = _SET_AT_RUNTIME
+                self.input.method['samples'] = _SET_AT_RUNTIME
+
             self.input.responses['no_gradients'] = ''
             self.input.responses['no_hessians'] = ''
 ################################################################################
