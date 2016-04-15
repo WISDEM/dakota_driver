@@ -632,6 +632,7 @@ class pydakdriver(DakotaBase):
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _SET_AT_RUNTIME
                 self.input.method['sample_type'] = _SET_AT_RUNTIME
+                self.input.method['seed'] = _SET_AT_RUNTIME
         
             if UQ_type == 'quasi':
                 self.input.method['fsu_quasi_mc'] = ''
@@ -642,7 +643,6 @@ class pydakdriver(DakotaBase):
                 self.input.method['adaptive_sampling'] = ''
 
             self.input.method['samples'] = _SET_AT_RUNTIME
-            self.input.method['seed'] = _SET_AT_RUNTIME
             self.input.responses['no_gradients'] = ''
             self.input.responses['no_hessians'] = ''
 ################################################################################
