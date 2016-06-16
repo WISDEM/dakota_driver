@@ -17,10 +17,11 @@ class rosenDistTest(Assembly):
     def configure(self):
         self.add('rose', rosen())
         driver_obj = pydakdriver()
-        driver_obj.UQ()
+        driver_obj.UQ('sampling')
         driver = self.add('driver',driver_obj)
         driver.stdout = 'dakotaDist.out'
         driver.stderr = 'dakotaDist.err'
+        driver.precision = 1e-4
         driver.samples = 15
         driver.add_special_distribution('rose.x2', "weibull", alpha = .5, beta = 0.2)
         driver.add_parameter('rose.x1', low=-1.5, high=1.5)
@@ -57,5 +58,6 @@ class rosenOptTest(Assembly):
 #top.run()
 top = rosenDistTest()
 top.run()
+print 'ok'
 #top = rosenOptTest()
 #top.run()

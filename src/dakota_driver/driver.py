@@ -187,6 +187,7 @@ class DakotaBase(Driver):
         ######## 
         n_params = self.total_parameters()
         if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
+        if hasattr(self, 'precision'): self.input.environment.append("output_precision %s"%str(self.precision))
         else: ineq_constraints = False
         for key in self.input.method:
             if key == 'output': self.input.method[key] = self.output
@@ -617,7 +618,7 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
-    def UQ(self,UQ_type = 'quasi'):
+    def UQ(self,UQ_type = 'quasi', use_seed=True):
             self.seed = 42 #_SET_AT_RUNTIME
             self.input.responses = collections.OrderedDict()
             self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
@@ -632,12 +633,14 @@ class pydakdriver(DakotaBase):
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _SET_AT_RUNTIME
                 self.input.method['sample_type'] = _SET_AT_RUNTIME
-                self.input.method['seed'] = _SET_AT_RUNTIME
+                if use_seed: self.input.method['seed'] = _SET_AT_RUNTIME
         
             if UQ_type == 'quasi':
                 self.input.method['fsu_quasi_mc'] = ''
                 self.quasi_sample_type = "halton"
                 self.input.method['quasi_sample_type'] = _SET_AT_RUNTIME
+                self.max_iterations = 1000000
+                self.input.method['max_iterations'] = _SET_AT_RUNTIME
 
             if UQ_type == 'adaptive':
                 self.input.method['adaptive_sampling'] = ''

@@ -1,8 +1,13 @@
 from dakota_driver.driver import pydakdriver
+import numpy as np
 from openmdao.main.api import Component, Assembly
 from openmdao.lib.drivers.api import SLSQPdriver, CONMINdriver, Genetic, COBYLAdriver, NEWSUMTdriver
 from openmdao.lib.datatypes.api import Float
 import unittest
+from pyopt_driver.pyopt_driver import pyOptDriver
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
 
 dacout = 'dakota.out'
 
@@ -28,7 +33,9 @@ class get_dak_output(Component):
        # Get mean value
        self.objective_vals = vals[nam]
        self.mean_f = sum(self.objective_vals)/len(self.objective_vals)
-       print "GET_DAK X1 f", self.x1, self.mean_f
+
+       rank = comm.Get_rank()
+       if rank == 0: print self.x1
 
 class rosen(Component):
     x1 = Float(0.0, iotype='in', desc = 'The variable x1' )
@@ -38,8 +45,7 @@ class rosen(Component):
     def execute(self):
         x1 = self.x1
         x2 = self.x2
-        self.f = (1-x1)**2 + 100*(x2-x1**2)**2
-        print 'X1 X2', x1,x2
+        self.f = (1-x1)**2 + 100*(x2-x1**2)**2 #+ np.random.random()
 
 class rosenSA(Assembly):
     def configure(self):
@@ -54,14 +60,18 @@ class rosenSA(Assembly):
         self.driver.stderr = 'dakota.err'
         self.driver.sample_type = 'random'
         self.driver.seed = 4
-        self.driver.samples = 15
-        self.driver.add_special_distribution('rose.x2', "normal", mean = .1, std_dev = 0.000000001)
+        self.driver.samples = 5000
+        self.driver.add_special_distribution('rose.x2', "normal", mean = .1, std_dev = .5)
         self.driver.add_objective('x1')
         self.driver.add_objective('rose.f')
 
 class outer_opt(Assembly):
     def configure(self):
-        self.add('driver',COBYLAdriver())
+        self.driver = self.add('driver', pyOptDriver())
+        self.driver.optimizer = 'NSGA2'
+        self.driver.pyopt_diff = True
+        self.driver.options["PopSize"] = 4
+        self.driver.options["maxGen"] = 100
 
         self.add('roseSA',rosenSA())
         self.add('dakBak', get_dak_output())
