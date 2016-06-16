@@ -33,13 +33,14 @@ While some parameters can only be set through configuration function calls (list
 
 ### UQ  ( Uncertainty Quantification )
 
-    pydakdriver.UQ( UQ_type = 'sampling', sample_type = 'lhs', seed = __, samples = 100)
+    pydakdriver.UQ( UQ_type = 'sampling', use_seed = True)
     description: uncertainty quantification driver configuration
        arguments:
            UQ_type = dakota uncertainty quantification procedure
               options:
                  'sampling'
                     description: monte carlo sampling
+            use_seed = use seed if True, do not specify DAKOTA seed if false
        Option Descriptions
        ------------------
        sample_type = random sampling approach
