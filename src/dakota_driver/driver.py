@@ -155,7 +155,9 @@ class DakotaBase(Driver):
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
+        print 'decision variables ',self._desvars.keys()
         for i, var  in enumerate(self._desvars.keys()):
+            #self.add_param(var, cv[i])
             self.set_desvar(var, cv[i])
         #self.set_parameters(cv)
         #self.run_iteration()
@@ -382,7 +384,9 @@ class DakotaBase(Driver):
         # ------------ special distributions cases ------- -------- #
         for var in self.special_distribution_variables:
              if var in parameters: self.remove_parameter(var)
-             self.add_parameter(var,low= -999, high = 999)
+             self.add_desvar(var)#,low= -999, high = 999)
+             #self.add_param(var)#,low= -999, high = 999)
+             #self.add_parameter(var,low= -999, high = 999)
 
 
         if self.normal_descriptors:
@@ -655,7 +659,7 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
-    def UQ(self,UQ_type = 'sampling'):
+    def UQ(self,UQ_type = 'sampling', use_seed=True):
             self.sample_type =  'random' #'lhs'
             #self.seed = _SET_AT_RUNTIME
             self.samples=100
@@ -667,7 +671,7 @@ class pydakdriver(DakotaBase):
                 self.input.method['sampling'] = ''
                 self.input.method['output'] = _SET_AT_RUNTIME
                 self.input.method['sample_type'] = _SET_AT_RUNTIME
-                #self.input.method['seed'] = _SET_AT_RUNTIME
+                if use_seed==True: self.input.method['seed'] = _SET_AT_RUNTIME
                 self.input.method['samples'] = _SET_AT_RUNTIME
         
                 self.input.responses = collections.OrderedDict()
