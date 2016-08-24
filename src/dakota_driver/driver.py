@@ -155,7 +155,6 @@ class DakotaBase(Driver):
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
-        print 'decision variables ',self._desvars.keys()
         for i, var  in enumerate(self._desvars.keys()):
             #self.add_param(var, cv[i])
             self.set_desvar(var, cv[i])
