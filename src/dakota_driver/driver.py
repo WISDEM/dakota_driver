@@ -477,7 +477,8 @@ class DakotaBase(Driver):
            if need_bounds:
                 #i = 1
                 lbounds = []
-                for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                #for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                for val in self._desvars.values()[:-1]:
                   #i+=1
                  # if i < len(parameters):
                     if isinstance(val["lower"], collections.Iterable):
@@ -487,7 +488,8 @@ class DakotaBase(Driver):
                 #ubounds = [str(val['upper']) for val in parameters.values()]
                 ubounds = []
                 #for val in self._desvars.values():#[:len(parameters)]:
-                for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                #for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                for val in self._desvars.values()[:-1]:
                     if isinstance(val["upper"], collections.Iterable):
                         ubounds.extend(val["upper"])
                     else: ubounds.append(val["upper"])
@@ -717,6 +719,7 @@ class pydakdriver(DakotaBase):
          
             self.input.method["method\n\tid_method 'expf3'\n\tsampling\n\t\tsamples %d\n\tmodel_pointer 'f3m'\n"%self.n_surrogate_samples] = ''
             self.input.method["method\n\tid_method 'f3dace'\n\tsampling\n\tsamples 400\n\tmodel_pointer 'f3dacem'\n"] = ''
+            #self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 1\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
             self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 0\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
            
             

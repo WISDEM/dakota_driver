@@ -47,7 +47,7 @@ root.connect('p2.y', 'p.y')
 
 drives = pydakdriver(name = 'top.driver')
 #drives.Optimization()
-drives.Optimization(opt_type='soga', ouu=0)
+drives.Optimization(opt_type='soga', ouu=1)
 #drives.UQ()
 top.driver = drives
 #top.driver = ScipyOptimizer()
