@@ -402,11 +402,13 @@ class DakotaBase(Driver):
         for var in self.special_distribution_variables:
              if var in parameters: self.remove_parameter(var)
              self.add_desvar(var)#,low= -999, high = 999)
+             print ('add3d %s %d'%(var,var in parameters))
              #self.add_param(var)#,low= -999, high = 999)
              #self.add_parameter(var,low= -999, high = 999)
 
 
         if self.normal_descriptors:
+            #print(self.normal_means) ; quit()
             self.input.variables.extend([
                 'normal_uncertain =  %s' % len(self.normal_means),
                 '  means  %s' % ' '.join(self.normal_means),
@@ -471,6 +473,7 @@ class DakotaBase(Driver):
            #print '*', self._desvars.values()
            #print '*', self.get_constraint_metadata()
            #print '*', parameters ; quit()
+
            if need_bounds:
                 #i = 1
                 lbounds = []
@@ -537,6 +540,7 @@ class DakotaBase(Driver):
         def check_set(option):
             if option == _SET_AT_RUNTIME: raise ValueError("INCOMPLETE DEFINITION FOR VARIABLE "+str(var))
 
+        varlist = [] # handles array entries
         if dist == 'normal':
             check_set(std_dev)
             check_set(mean)
@@ -544,11 +548,21 @@ class DakotaBase(Driver):
            # check_set(upper_bounds)
           #  self.normal_lower_bounds.append(str(lower_bounds))
           #  self.normal_upper_bounds.append(str(upper_bounds))
-            self.normal_means.append(str(mean))
-            self.normal_std_devs.append(str(std_dev))
-            self.normal_descriptors.append(var)
-            self.normal_lower_bounds.append(str(lower_bounds))
-            self.normal_upper_bounds.append(str(upper_bounds))
+            if True:#len(mean)==0:
+               self.normal_means.append(str(mean))
+               self.normal_std_devs.append(str(std_dev))
+               self.normal_descriptors.append(var)
+               self.normal_lower_bounds.append(str(lower_bounds))
+               self.normal_upper_bounds.append(str(upper_bounds))
+            else:
+               self.normal_means.extend(str(m) for m in mean)
+               self.normal_std_devs.extend(str(s) for s in std_dev)
+               for i in range(len(mean)): 
+                   self.normal_descriptors.append(var+"%d"%i)
+                   varlist.append(var+"%d"%i)
+               self.normal_lower_bounds.extend(str(l) for l in lower_bounds)
+               self.normal_upper_bounds.extend(str(u) for u in upper_bounds)
+               
                
         elif dist == 'lognormal':
             check_set(std_dev)
@@ -594,7 +608,11 @@ class DakotaBase(Driver):
         else: 
             raise ValueError(str(dist)+" is not a defined distribution")
 
-        self.special_distribution_variables.append(var)
+        if varlist:
+          for var in varlist:
+            self.special_distribution_variables.append(var)
+        else:
+            self.special_distribution_variables.append(var)
 
 ################################################################################
 ########################## Hierarchical Driver ################################
