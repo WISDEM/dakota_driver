@@ -91,6 +91,15 @@ class DakotaBase(Driver):
             self.raise_exception('Variables not set', ValueError)
         if not self.input.responses:
             self.raise_exception('Responses not set', ValueError)
+        print  
+
+        #if self.get_constraint_metadata():
+            #rline = self.get_constraint_metadata().items()[0][1]['lower'] 
+            #self.input.responses = self.input.responses + ["ineq_constraints = %d"%(len(self.get_constraint_metadata().items()[0][1]['lower'] ))]
+
+        resline = self.input.responses[0].split()
+        resline[0] = 'response_functions'
+        if self.ouu: self.input.responses = [" id_responses 'f3r'"] + [''.join(resline)] + self.input.responses[1:] + ["responses\n  id_responses 'f4r'"] + self.input.responses
 
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
@@ -101,6 +110,11 @@ class DakotaBase(Driver):
         else:
             if self.tabular_graphics_data:
                 self.input.environment.append('tabular_graphics_data')
+
+
+
+        #print self.input;quit()
+        #self.input.method = ["\tid_method 'opt'\n\t\tsoga\n\tmodel_pointer 'f4m'"]
 
         #infile = self.get_pathname() + '.in'
         infile = self.name+ '.in'
@@ -166,8 +180,10 @@ class DakotaBase(Driver):
 
         expressions = self.get_objectives()#.values()
         if hasattr(self, 'get_eq_constraints'):
+            print self.get_eq_constraints().values() ; quit()
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
+            print self.get_ineq_constraints().values() ; quit()
             expressions.extend(self.get_ineq_constraints().values())
 
         fns = []
@@ -380,6 +396,8 @@ class DakotaBase(Driver):
             self.input.variables.append(
                 '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names)
             )
+        
+
         # ------------ special distributions cases ------- -------- #
         for var in self.special_distribution_variables:
              if var in parameters: self.remove_parameter(var)
@@ -393,7 +411,9 @@ class DakotaBase(Driver):
                 'normal_uncertain =  %s' % len(self.normal_means),
                 '  means  %s' % ' '.join(self.normal_means),
                 '  std_deviations  %s' % ' '.join(self.normal_std_devs),
-                "  descriptors  '%s'" % "' '".join(self.normal_descriptors)
+                "  descriptors  '%s'" % "' '".join(self.normal_descriptors),
+                '  lower_bounds = %s' % ' '.join(self.normal_lower_bounds),
+                '  upper_bounds = %s' % ' '.join(self.normal_upper_bounds)
                 ])
                    
         if self.lognormal_descriptors:
@@ -438,6 +458,43 @@ class DakotaBase(Driver):
                 ])
         
 
+        if self.ouu:
+           varlist = self.input.variables
+           #blk1 = varlist
+           #blk2 = varlist
+           blk1 = ["   id_variables 'x1statex2'"] + varlist
+           blk2 = ["variables\n  active all\n  id_variables 'x1andx2'"] + varlist
+           blk3 = ["variables\n  id_variables 'x1only'\n "] + ['continuous_design = %s' % len(parameters)]
+           #blk3 += [ 'continuous_design = %s\n' % len(parameters)] + ['  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names]
+           self.input.variables = blk1+['\n']+blk2+['\n']+blk3
+
+           #print '*', self._desvars.values()
+           #print '*', self.get_constraint_metadata()
+           #print '*', parameters ; quit()
+           if need_bounds:
+                #i = 1
+                lbounds = []
+                for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                  #i+=1
+                 # if i < len(parameters):
+                    if isinstance(val["lower"], collections.Iterable):
+                        lbounds.extend(val["lower"])
+                    else: lbounds.append(val["lower"])
+                #lbounds = [str(val['lower']) for val in parameters.values()]
+                #ubounds = [str(val['upper']) for val in parameters.values()]
+                ubounds = []
+                #for val in self._desvars.values():#[:len(parameters)]:
+                for val in self._desvars.values()[:-1*len(self.get_constraint_metadata())]:
+                    if isinstance(val["upper"], collections.Iterable):
+                        ubounds.extend(val["upper"])
+                    else: ubounds.append(val["upper"])
+                self.input.variables.extend([
+                    '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
+                    '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
+
+           self.input.variables.append(
+                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
+    
 # ---------------------------  special distributions ---------------------- #
  
     def clear_special_variables(self):
@@ -450,8 +507,8 @@ class DakotaBase(Driver):
        self.normal_means = []
        self.normal_std_devs = []
        self.normal_descriptors = []
-       #normal_lower_bounds = []
-       #normal_upper_bounds = []
+       self.normal_lower_bounds = []
+       self.normal_upper_bounds = []
    
        self.lognormal_means= []
        self.lognormal_std_devs = []
@@ -490,6 +547,8 @@ class DakotaBase(Driver):
             self.normal_means.append(str(mean))
             self.normal_std_devs.append(str(std_dev))
             self.normal_descriptors.append(var)
+            self.normal_lower_bounds.append(str(lower_bounds))
+            self.normal_upper_bounds.append(str(upper_bounds))
                
         elif dist == 'lognormal':
             check_set(std_dev)
@@ -548,6 +607,7 @@ class pydakdriver(DakotaBase):
         self.input.responses = collections.OrderedDict()
 
         # default definitions for set_variables
+        self.ouu=False
         self.need_start = False 
         self.uniform=False
         self.need_bounds=True
@@ -596,9 +656,9 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False):
+    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False, ouu=False):
+        self.seed = 123
         self.convergence_tolerance = '1.e-8'
-        self.seed = _SET_AT_RUNTIME
         self.max_iterations = '200'
         self.max_function_evaluations = '2000'
 
@@ -611,6 +671,10 @@ class pydakdriver(DakotaBase):
             self.input.method[opt_type] = ""
             self.analytical_gradients()
             self.hessians()
+        if opt_type == 'soga':
+            self.input.method["id_method"] = "'opt'"
+            self.input.method[opt_type] = "\t"
+            #self.input.method["convergence_type"] = "\taverage_fitness_tracker"
         if opt_type == 'efficient_global':
             self.input.method["efficient_global"] = ""
             self.input.method["seed"] = _SET_AT_RUNTIME
@@ -624,12 +688,20 @@ class pydakdriver(DakotaBase):
 
             self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
             self.numerical_gradients()
-            
-        if surrogate_model: 
-            self.input.method["surrogate"] = _SET_AT_RUNTIME
-            self.samples = 100
-            #self.input.interface.append("\tfork")
 
+        self.n_surrogate_samples = 1000
+        if ouu: 
+            self.ouu = True
+            
+            #self.input.environment = ["  method_pointer 'opt'"]
+
+            self.input.method["model_pointer"] = "'f4m'"
+         
+            self.input.method["method\n\tid_method 'expf3'\n\tsampling\n\t\tsamples %d\n\tmodel_pointer 'f3m'\n"%self.n_surrogate_samples] = ''
+            self.input.method["method\n\tid_method 'f3dace'\n\tsampling\n\tsamples 400\n\tmodel_pointer 'f3dacem'\n"] = ''
+            self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 0\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
+           
+            
     def Parameter_Study(self,study_type = 'vector'):
         self.study_type = study_type
         if study_type == 'vector':
@@ -658,7 +730,7 @@ class pydakdriver(DakotaBase):
         self.input.responses['no_gradients']=''
         self.input.responses['no_hessians']=''
 
-    def UQ(self,UQ_type = 'sampling', use_seed=True):
+    def UQ(self,UQ_type = 'sampling', use_seed=False):
             self.sample_type =  'random' #'lhs'
             #self.seed = _SET_AT_RUNTIME
             self.samples=100
