@@ -1,7 +1,12 @@
 from __future__ import print_function
 from dakota_driver.driver import pydakdriver
 from openmdao.api import ScipyOptimizer
-from openmdao.api import IndepVarComp, Component, Problem, Group
+from openmdao.api import IndepVarComp, Component, Problem, Group, ParallelGroup
+from openmdao.core.mpi_wrap import MPI
+if MPI: 
+    from openmdao.core.petsc_impl import PetscImpl as impl
+else:
+    from openmdao.api import BasicImpl as impl
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -17,6 +22,7 @@ class Paraboloid(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
         """
+        print ('hey')
 
         x = params['x']
         y = params['y']
@@ -33,7 +39,7 @@ class Paraboloid(Component):
         J['f_xy', 'x'] = 2.0*x - 6.0 + y
         J['f_xy', 'y'] = 2.0*y + 8.0 + x
         return J
-top = Problem()
+top = Problem(impl = impl)
 
 root = top.root = Group()
 
@@ -47,15 +53,15 @@ root.connect('p2.y', 'p.y')
 
 drives = pydakdriver(name = 'top.driver')
 #drives.Optimization()
-drives.Optimization(opt_type='soga', ouu=1)
+drives.Optimization(opt_type='soga', ouu=0)
 #drives.UQ()
 top.driver = drives
 #top.driver = ScipyOptimizer()
 #top.driver.options['optimizer'] = 'SLSQP'
 
-top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=20, lower_bounds=-30, upper_bounds=30)
-#top.driver.add_desvar('p1.x', lower=-50, upper=50)
 top.driver.add_desvar('p2.y', lower=-50, upper=50)
+top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=1e-11, lower_bounds=-30, upper_bounds=30)
+#top.driver.add_desvar('p1.x', lower=-50, upper=50)
 top.driver.add_objective('p.f_xy')
 
 top.setup()
