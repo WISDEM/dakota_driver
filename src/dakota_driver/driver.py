@@ -126,9 +126,9 @@ class DakotaBase(Driver):
         self.input.write_input(infile, data=self)
         from openmdao.core.mpi_wrap import MPI
         if MPI:
-            run_dakota(infile, use_mpi=True, stdout=self.stdout, stderr=self.stderr)#, restart=self.dakota_hotstart)
+            run_dakota(infile, use_mpi=True, stdout=self.stdout, stderr=self.stderr, restart=self.dakota_hotstart)
         else:
-            run_dakota(infile, stdout=self.stdout, stderr=self.stderr)#, restart= self.dakota_hotstart)
+            run_dakota(infile, stdout=self.stdout, stderr=self.stderr, restart= self.dakota_hotstart)
         #try:
         #    run_dakota(infile, stdout=self.stdout, stderr=self.stderr)
         #except Exception:
@@ -183,10 +183,12 @@ class DakotaBase(Driver):
         else: dvlist = []
         if self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
+                print 'setting-------> ',var, cv[i]
                 self.set_desvar(var, cv[i])
         else:
             dvl = dvlist + self._desvars.keys()
             for i  in range(len(cv)):
+                print '------>setting ',dvl[i], cv[i]
                 self.set_desvar(dvl[i], cv[i])
         #self.set_parameters(cv)
         #self.run_iteration()
@@ -676,11 +678,11 @@ class pydakdriver(DakotaBase):
 
         self.n_sub_samples = 50
         self.n_sur_samples = 50
+        self.max_function_evaluations = '999000'
         self.population_size = 100
         self.seed = 123
         self.convergence_tolerance = '1.e-8'
-        self.max_iterations = '2000'
-        self.max_function_evaluations = '2000'
+        self.max_iterations = 2000
 
  
         if name: self.name = name
@@ -746,6 +748,7 @@ class pydakdriver(DakotaBase):
             self.input.method["convergence_type"] = "\taverage_fitness_tracker"
             self.input.method["population_size"] = self.population_size
             self.input.method["max_iterations"] = self.max_iterations
+            self.input.method["max_function_evaluations"] = self.max_function_evaluations
             self.input.method["replacement_type"] = "unique_roulette_wheel"
         if opt_type == 'efficient_global':
             self.input.method["efficient_global"] = ""
