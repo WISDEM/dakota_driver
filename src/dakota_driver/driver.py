@@ -211,7 +211,7 @@ class DakotaBase(Driver):
 
         expressions = self.get_objectives().values()#.update(self.get_constraints())
         for con in self.get_constraints():
-            expressions.append(self.get_constraints()[con])
+            expressions.append(-1*self.get_constraints()[con])
         if hasattr(self, 'get_eq_constraints'):
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
