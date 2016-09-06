@@ -209,7 +209,9 @@ class DakotaBase(Driver):
         print('pydak solved nonlinear, fails here...')
         #self.recorders.record_iteration(system, metadata)
 
-        expressions = self.get_objectives()#.values()
+        expressions = self.get_objectives().values()#.update(self.get_constraints())
+        for con in self.get_constraints():
+            expressions.append(self.get_constraints()[con])
         if hasattr(self, 'get_eq_constraints'):
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
@@ -217,7 +219,8 @@ class DakotaBase(Driver):
 
         fns = []
         fnGrads = []
-        for i, val in enumerate(expressions.values()):
+        for i, val in enumerate(expressions):
+        #for i, val in enumerate(expressions.values()):
             if asv[i] & 1:
                 #val = expr.evaluate(self.parent)
                 #if isinstance(val, list):
@@ -248,7 +251,8 @@ class DakotaBase(Driver):
        # method #
         ######## 
         n_params = len(self._desvars.keys())
-        if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
+        #if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
+        if hasattr(self, 'get_constraints'): ineq_constraints = self.get_constraints()
         else: ineq_constraints = False
         for key in self.input.method:
             if key == 'output': self.input.method[key] = self.output[0]
@@ -318,8 +322,14 @@ class DakotaBase(Driver):
             if key =='objective_functions': self.input.responses[key] = len(objectives)
             if key =='response_functions': self.input.responses[key] = len(objectives)
             if key == 'nonlinear_inequality_constraints' :
-               if ineq_constraints: self.input.responses[key] = ineq_constraints
-               else: self.input.responses.pop(key)
+                conlist = []
+                cons = self.get_constraints()
+                for c in cons:
+                     conlist.extend(cons[c])
+                if conlist: self.input.responses['nonlinear_inequality_constraints']=len(conlist)
+                else: self.input.responses['nonlinear_inequality_constraints']='0'
+            #   if ineq_constraints: self.input.responses[key] = ineq_constraints
+            #   else: self.input.responses.pop(key)
             if key == 'interval_type': 
                self.input.responses = collections.OrderedDict([(key+' '+self.interval_type, v) if k == key else (k, v) for k, v in self.input.responses.items()])
             if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
@@ -731,6 +741,11 @@ class pydakdriver(DakotaBase):
 
     def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False, ouu=False):
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
+        cons = self.get_constraints()
+        conlist = []
+        for c in cons:
+           conlist.extend(cons[c])
+        self.input.responses['nonlinear_inequality_constraints']=len(conlist)
         self.input.responses['no_gradients'] = ''
         self.input.responses['no_hessians'] = ''
         if opt_type == 'optpp_newton':
@@ -761,7 +776,7 @@ class pydakdriver(DakotaBase):
             self.input.method["output"] = ''
             self.input.method['constraint_tolerance'] = '1.e-8'
 
-            self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
+            #self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
             self.numerical_gradients()
 
         if ouu: 
