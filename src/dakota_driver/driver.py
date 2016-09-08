@@ -210,9 +210,11 @@ class DakotaBase(Driver):
         print('pydak solved nonlinear, fails here...')
         #self.recorders.record_iteration(system, metadata)
 
-        expressions = self.get_objectives().values()#.update(self.get_constraints())
-        for con in self.get_constraints():
-            expressions.append(-1*self.get_constraints()[con])
+        expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
+        for con in self.get_constraints().values():
+            for c in con:
+               expressions.append(c)
+               #Eexpressions.append(-1*self.get_constraints()[con])
         print 'yooo exps are ',expressions
         if hasattr(self, 'get_eq_constraints'):
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
@@ -221,6 +223,9 @@ class DakotaBase(Driver):
 
         fns = []
         fnGrads = []
+        #print asv
+        #print expressions
+        #quit()
         for i in range(len(asv)):
         #for i, val in enumerate(expressions.values()):
             val = expressions[i]
@@ -228,12 +233,13 @@ class DakotaBase(Driver):
                 #val = expr.evaluate(self.parent)
                 #if isinstance(val, list):
                 #if isinstance(val, array):
-                fns.extend(val)
+                fns.extend([val])
                 #else:
                 #    fns.append(val)
             if asv[i] & 2:
                #val = expr.evaluate_gradient(self.parent)
-               fnGrads.append(val)
+               fnGrads.extend([val])
+               #fnGrads.append([val])
                # self.raise_exception('Gradients not supported yet',
                #                      NotImplementedError)
             if asv[i] & 4:
