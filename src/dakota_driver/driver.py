@@ -104,7 +104,8 @@ class DakotaBase(Driver):
         resline = self.input.responses[0].split()
         #resline[0] = 'objective_functions'
         resline[0] = 'response_functions'# <-- for surrogates
-        if self.ouu: self.input.responses = [" id_responses 'f2r'"] + [''.join(resline)] + self.input.responses[1:] + ["responses\n  id_responses 'f1r'"] + self.input.responses
+        if self.ouu: self.input.responses = [" id_responses 'f2r'"] + [''.join(resline)] + self.input.responses[2:] + ["responses\n  id_responses 'f1r'"] + self.input.responses
+        #if self.ouu: self.input.responses = [" id_responses 'f2r'"] + [''.join(resline)] + self.input.responses[1:] + ["responses\n  id_responses 'f1r'"] + self.input.responses
 
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
@@ -212,6 +213,7 @@ class DakotaBase(Driver):
         expressions = self.get_objectives().values()#.update(self.get_constraints())
         for con in self.get_constraints():
             expressions.append(-1*self.get_constraints()[con])
+        print 'yooo exps are ',expressions
         if hasattr(self, 'get_eq_constraints'):
             expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         if hasattr(self, 'get_ineq_constraints'):
@@ -219,8 +221,9 @@ class DakotaBase(Driver):
 
         fns = []
         fnGrads = []
-        for i, val in enumerate(expressions):
+        for i in range(len(asv)):
         #for i, val in enumerate(expressions.values()):
+            val = expressions[i]
             if asv[i] & 1:
                 #val = expr.evaluate(self.parent)
                 #if isinstance(val, list):
@@ -455,11 +458,17 @@ class DakotaBase(Driver):
 #                    parameters.append([param+'['+str(i)+']', val])
 #                    self.array_desvars.append(param+'['+str(i)+']')
 
+           cons = []
+           for con in self.get_constraints():
+              cons.append(-1*self.get_constraints()[con])
            notnormps = [p[0] for p in parameters]
            for x in self.reg_params:
-             print '**',x[0],notnormps
              if x[0] in notnormps: notnormps.remove(x[0])
-           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 1\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params])]
+           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 0\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params])]
+           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3 %s\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(' '.join(["0 0" for _ in range(len(cons[0]))]), ' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params]), ' '.join(["1 3" for _ in range(len(cons[0]))]))]
+           names = [s[0] for s in parameters]
+
+           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(" ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons[0]))))]
            varlist = self.input.variables
            #ln = varlist[0].split()
            #ln[0] = 'continuous_state'
