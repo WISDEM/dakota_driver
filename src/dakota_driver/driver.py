@@ -184,17 +184,14 @@ class DakotaBase(Driver):
         else: dvlist = []
         if self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
-                print 'setting-------> ',var, cv[i]
                 self.set_desvar(var, cv[i])
         else:
             dvl = dvlist + self._desvars.keys()
             for i  in range(len(cv)):
-                print '------>setting ',dvl[i], cv[i]
                 self.set_desvar(dvl[i], cv[i])
         #self.set_parameters(cv)
         #self.run_iteration()
         system = self.root
-        print ('probing dakdriver')
         metadata = self.metadata  = create_local_meta(None, 'pydakrun%d'%world.Get_rank())
         system.ln_solver.local_meta = metadata
         self.iter_count += 1
@@ -207,7 +204,6 @@ class DakotaBase(Driver):
         self.root.solve_nonlinear()
 
             #system.solve_nonlinear(metadata=metadata)
-        print('pydak solved nonlinear, fails here...')
         #self.recorders.record_iteration(system, metadata)
 
         expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
@@ -215,41 +211,42 @@ class DakotaBase(Driver):
             for c in con:
                expressions.append(c)
                #Eexpressions.append(-1*self.get_constraints()[con])
-        print 'yooo exps are ',expressions
-        if hasattr(self, 'get_eq_constraints'):
-            expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
-        if hasattr(self, 'get_ineq_constraints'):
-            expressions.extend(self.get_ineq_constraints().values())
+        #if hasattr(self, 'get_eq_constraints'):
+        #    expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
+        #if hasattr(self, 'get_ineq_constraints'):
+        #    expressions.extend(self.get_ineq_constraints().values())
 
         fns = []
         fnGrads = []
-        #print asv
-        #print expressions
+        print asv, '|||',len(asv)
+        print expressions, '|||', len(expressions)
         #quit()
         for i in range(len(asv)):
         #for i, val in enumerate(expressions.values()):
             val = expressions[i]
-            if asv[i] & 1:
-                #val = expr.evaluate(self.parent)
-                #if isinstance(val, list):
-                #if isinstance(val, array):
-                fns.extend([val])
-                #else:
-                #    fns.append(val)
-            if asv[i] & 2:
-               #val = expr.evaluate_gradient(self.parent)
-               fnGrads.extend([val])
-               #fnGrads.append([val])
-               # self.raise_exception('Gradients not supported yet',
-               #                      NotImplementedError)
-            if asv[i] & 4:
-                self.raise_exception('Hessians not supported yet',
-                                     NotImplementedError)
+
+            fns.extend([val])
+            #if asv[i] & 1:
+            #    #val = expr.evaluate(self.parent)
+            #    #if isinstance(val, list):
+            #    #if isinstance(val, array):
+            #    fns.extend([val])
+            #    #else:
+            #    #    fns.append(val)
+            #if asv[i] & 2:
+            #   #val = expr.evaluate_gradient(self.parent)
+            #   fnGrads.extend([val])
+            #   #fnGrads.append([val])
+            #   # self.raise_exception('Gradients not supported yet',
+            #   #                      NotImplementedError)
+            #if asv[i] & 4:
+            #    self.raise_exception('Hessians not supported yet',
+            #                         NotImplementedError)
 
         print('pdp3')
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
         #self._logger.debug('returning %s', retval)
-        print('pydak is done')
+        print 'returning ',len(retval['fns'])
         return retval
 
 
@@ -276,7 +273,7 @@ class DakotaBase(Driver):
 
             # optimization
             if key == 'conmin':
-                self.set_variables(need_start=True)
+                #self.set_variables(need_start=True)
                 if ineq_constraints: 
                     conmeth = 'conmin_mfd'
                 else: 
@@ -474,7 +471,7 @@ class DakotaBase(Driver):
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3 %s\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(' '.join(["0 0" for _ in range(len(cons[0]))]), ' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params]), ' '.join(["1 3" for _ in range(len(cons[0]))]))]
            names = [s[0] for s in parameters]
 
-           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(" ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons[0]))))]
+           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons[0]))))]
            varlist = self.input.variables
            #ln = varlist[0].split()
            #ln[0] = 'continuous_state'
@@ -692,10 +689,11 @@ class pydakdriver(DakotaBase):
         self.input.responses = collections.OrderedDict()
 
         # default definitions for set_variables
-        self.ouu=False
+        self.ouu = False
+        self.stdMult = 0.
         self.need_start = False 
-        self.uniform=False
-        self.need_bounds=True
+        self.uniform = False
+        self.need_bounds = True
 
         self.dakota_hotstart = False
         # allow arrays to be desvars
@@ -704,10 +702,12 @@ class pydakdriver(DakotaBase):
         self.n_sub_samples = 50
         self.n_sur_samples = 50
         self.max_function_evaluations = '999000'
+        self.constraint_tolerance = 1e-8
         self.population_size = 100
         self.seed = 123
         self.convergence_tolerance = '1.e-8'
         self.max_iterations = 2000
+        self.fd_gradient_step_size = '1e-8'
 
  
         if name: self.name = name
@@ -728,7 +728,6 @@ class pydakdriver(DakotaBase):
 
     def analytical_gradients(self):
          self.interval_type = 'forward'
-         self.fd_gradient_step_size = '1.e-6'
          for key in self.input.responses:
              if key == 'no_gradients':
                   self.input.responses.pop(key)
@@ -742,7 +741,6 @@ class pydakdriver(DakotaBase):
              if key == 'no_gradients': self.input.responses.pop(key)
          self.input.responses['numerical_gradients'] = ''
          if method_source=='dakota':self.input.responses['method_source dakota']=''
-         self.fd_gradient_step_size = '1e-8'
          self.interval_type = 'forward'
          self.input.responses['interval_type'] = ''
          self.input.responses['fd_gradient_step_size'] = self.fd_gradient_step_size
@@ -755,6 +753,7 @@ class pydakdriver(DakotaBase):
          # todo: Create Hessian default with options
 
     def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False, ouu=False):
+        self.input.method["id_method"] = "'opt'"
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
         cons = self.get_constraints()
         conlist = []
@@ -773,7 +772,6 @@ class pydakdriver(DakotaBase):
             self.input.method["id_method"] = "'opt'"
             self.input.method[opt_type] = "\t"
         if opt_type == 'soga':
-            self.input.method["id_method"] = "'opt'"
             self.input.method[opt_type] = "\t"
             self.input.method["convergence_type"] = "\taverage_fitness_tracker"
             self.input.method["population_size"] = self.population_size
@@ -787,8 +785,9 @@ class pydakdriver(DakotaBase):
         if opt_type == 'conmin':
             self.need_start=True           
 
-            self.input.method["conmin"] = ''
-            self.input.method["output"] = ''
+            self.input.method[opt_type] = "\t"
+            #self.input.method["conmin"] = ''
+            #self.input.method["output"] = ''
             self.input.method['constraint_tolerance'] = '1.e-8'
 
             #self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
