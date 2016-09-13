@@ -218,30 +218,27 @@ class DakotaBase(Driver):
 
         fns = []
         fnGrads = []
-        print asv, '|||',len(asv)
-        print expressions, '|||', len(expressions)
-        #quit()
         for i in range(len(asv)):
         #for i, val in enumerate(expressions.values()):
             val = expressions[i]
 
-            fns.extend([val])
-            #if asv[i] & 1:
-            #    #val = expr.evaluate(self.parent)
-            #    #if isinstance(val, list):
-            #    #if isinstance(val, array):
-            #    fns.extend([val])
-            #    #else:
-            #    #    fns.append(val)
-            #if asv[i] & 2:
-            #   #val = expr.evaluate_gradient(self.parent)
-            #   fnGrads.extend([val])
-            #   #fnGrads.append([val])
-            #   # self.raise_exception('Gradients not supported yet',
-            #   #                      NotImplementedError)
-            #if asv[i] & 4:
-            #    self.raise_exception('Hessians not supported yet',
-            #                         NotImplementedError)
+            #fns.extend([val])
+            if asv[i] & 1 or asv[i]==0:
+                #val = expr.evaluate(self.parent)
+                #if isinstance(val, list):
+                #if isinstance(val, array):
+                fns.extend([val])
+                #else:
+                #    fns.append(val)
+            if asv[i] & 2:
+               #val = expr.evaluate_gradient(self.parent)
+               fnGrads.extend([val])
+               #fnGrads.append([val])
+               # self.raise_exception('Gradients not supported yet',
+               #                      NotImplementedError)
+            if asv[i] & 4:
+                self.raise_exception('Hessians not supported yet',
+                                     NotImplementedError)
 
         print('pdp3')
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
