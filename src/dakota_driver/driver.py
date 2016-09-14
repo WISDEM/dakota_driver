@@ -97,15 +97,9 @@ class DakotaBase(Driver):
             self.raise_exception('Responses not set', ValueError)
         print  
 
-        #if self.get_constraint_metadata():
-            #rline = self.get_constraint_metadata().items()[0][1]['lower'] 
-            #self.input.responses = self.input.responses + ["ineq_constraints = %d"%(len(self.get_constraint_metadata().items()[0][1]['lower'] ))]
-
         resline = self.input.responses[0].split()
-        #resline[0] = 'objective_functions'
-        resline[0] = 'response_functions'# <-- for surrogates
-        if self.ouu: self.input.responses = [" id_responses 'f2r'"] + [''.join(resline)] + self.input.responses[2:] + ["responses\n  id_responses 'f1r'"] + self.input.responses
-        #if self.ouu: self.input.responses = [" id_responses 'f2r'"] + [''.join(resline)] + self.input.responses[1:] + ["responses\n  id_responses 'f1r'"] + self.input.responses
+        resline[0] = 'response_functions'
+        if self.ouu: self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n']+ ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
 
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
@@ -119,10 +113,6 @@ class DakotaBase(Driver):
 
 
 
-        #print self.input;quit()
-        #self.input.method = ["\tid_method 'opt'\n\t\tsoga\n\tmodel_pointer 'f4m'"]
-
-        #infile = self.get_pathname() + '.in'
         infile = self.name+ '.in'
         self.input.write_input(infile, data=self)
         from openmdao.core.mpi_wrap import MPI
@@ -753,12 +743,11 @@ class pydakdriver(DakotaBase):
         self.input.method["id_method"] = "'opt'"
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
         cons = self.get_constraints()
+        write_res = True
         conlist = []
         for c in cons:
            conlist.extend(cons[c])
         self.input.responses['nonlinear_inequality_constraints']=len(conlist)
-        self.input.responses['no_gradients'] = ''
-        self.input.responses['no_hessians'] = ''
         if opt_type == 'optpp_newton':
             self.need_start=True
             self.need_bounds=True
@@ -783,11 +772,8 @@ class pydakdriver(DakotaBase):
             self.need_start=True           
 
             self.input.method[opt_type] = "\t"
-            #self.input.method["conmin"] = ''
-            #self.input.method["output"] = ''
             self.input.method['constraint_tolerance'] = '1.e-8'
-
-            #self.input.responses['nonlinear_inequality_constraints'] = _SET_AT_RUNTIME
+            write_res = False
             self.numerical_gradients()
 
         if ouu: 
@@ -802,8 +788,9 @@ class pydakdriver(DakotaBase):
             #self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 1\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
 
             #self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 0\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
-           
-            
+        if write_res: 
+            self.input.responses['no_gradients'] = ''
+        self.input.responses['no_hessians'] = '' 
     def Parameter_Study(self,study_type = 'vector'):
         self.study_type = study_type
         if study_type == 'vector':
