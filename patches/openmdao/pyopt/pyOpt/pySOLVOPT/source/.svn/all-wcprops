@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/!svn/ver/24/trunk/pyOpt/pySOLVOPT/source
+END
+messages.inc
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/messages.inc
+END
+apprgrdn.f
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/apprgrdn.f
+END
+solvopt.bak
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/solvopt.bak
+END
+soptions.f
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/soptions.f
+END
+openunit.f
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/openunit.f
+END
+closeunit.f
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/closeunit.f
+END
+solvopt.f
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/!svn/ver/24/trunk/pyOpt/pySOLVOPT/source/solvopt.f
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/source/README
+END
+solvopt.diff
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/!svn/ver/24/trunk/pyOpt/pySOLVOPT/source/solvopt.diff
+END

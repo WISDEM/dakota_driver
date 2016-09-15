@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/!svn/ver/39/trunk/pyOpt/pySOLVOPT
+END
+LICENSE
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/LICENSE
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/!svn/ver/9/trunk/pyOpt/pySOLVOPT/__init__.py
+END
+pySOLVOPT.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/!svn/ver/39/trunk/pyOpt/pySOLVOPT/pySOLVOPT.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/!svn/ver/9/trunk/pyOpt/pySOLVOPT/setup.py
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/!svn/ver/2/trunk/pyOpt/pySOLVOPT/README
+END
