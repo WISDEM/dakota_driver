@@ -459,34 +459,16 @@ class Driver(object):
         val : ndarray or float
             value to assign to the design variable.
         """
-        #print (len(self.root.unknowns._dat[name].val))
         if name in self.root.unknowns._dat.keys():
            val = self.root.unknowns._dat[name].val
 
         # support for uncertain samples
         elif re.findall("(.*)\[(.*)\]", name)[0][0] in self.root.unknowns._dat.keys():
-        #    print ('=--=')
-        #    print([self.root.unknowns._dat])
             vn =re.findall("(.*)\[(.*)\]", name)[0][0] 
             nv = int(re.findall("(.*)\[(.*)\]", name)[0][1])
             self.root.unknowns[vn][nv] = value
             return
 
-        # support for array design variables
-        #elif(len(self.root.unknowns._dat[name].val)>1):
-        #    print (vn) ; quit()
-        #    self.root.unknowns._dat[re.findall("(.*)\[(.*)\]", name)[0][0]] 
-        #    print([self.root.unknowns._dat])
-        #    print ('--===--')
-        #    print ('*')
-        #    print(re.findall("(.*)\[(.*)\]", name)[0][1])
-        #    val = self.root.unknowns._dat[name].val[re.findall("(.*)\[(.*)\]", name)[0][1]]
-        #else:
-        #    print ('***')
-        #    print (self.root.unknowns._dat.keys())
-        #    print ('***')
-        #    print (re.findall("(.*)\[(.*)\]", name)[0] )
-        #    print ('dead' ) ; quit()
         if not isinstance(val, _ByObjWrapper) and \
                        self.root.unknowns._dat[name].val.size == 0:
             return
@@ -575,13 +557,9 @@ class Driver(object):
         """
         objs = OrderedDict()
 
-        print ('objprobe1')
         for key, meta in iteritems(self._objs):
-            print(key)
-            print(self._objs)
             objs[key] = self._get_distrib_var(key, meta, 'objective')
 
-        print ('objprobe2')
         return objs
 
     def add_constraint(self, name, lower=None, upper=None, equals=None,

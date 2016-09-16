@@ -686,7 +686,6 @@ class Group(System):
         return connections
 
     def _sys_solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
-        print ('openmdaoGroup')
         """
         Solves the group using the nonlinear solver specified in
         self.nl_solver. This wrapper performs any necessary pre/post
@@ -731,9 +730,7 @@ class Group(System):
             unknowns = unknowns if unknowns is not None else self.unknowns
             resids = resids if resids is not None else self.resids
 
-            print ('p1')
             self.nl_solver.solve(params, unknowns, resids, self, metadata)
-            print('p2')
 
     def children_solve_nonlinear(self, metadata):
         """
