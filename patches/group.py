@@ -748,9 +748,7 @@ class Group(System):
             if sub.is_active():
                 with sub._dircontext:
                     if isinstance(sub, Component):
-                        print ('child solving')
                         sub._sys_solve_nonlinear(sub.params, sub.unknowns, sub.resids)
-                        print ('child solved')
                         #return
                     else:
                         sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)

@@ -95,11 +95,14 @@ class DakotaBase(Driver):
             self.raise_exception('Variables not set', ValueError)
         if not self.input.responses:
             self.raise_exception('Responses not set', ValueError)
-        print  
 
-        resline = self.input.responses[0].split()
-        resline[0] = 'response_functions'
-        if self.ouu: self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n']+ ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
+        if self.ouu: 
+
+            resline = self.input.responses[0].split()
+            resline[0] = 'response_functions'
+            resline[2] = '1'
+
+            self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + self.input.responses[1] + ['\n']+ ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses[0] + self.input.responses[2:]
 
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
@@ -110,8 +113,6 @@ class DakotaBase(Driver):
         else:
             if self.tabular_graphics_data:
                 self.input.environment.append('tabular_graphics_data')
-
-
 
         infile = self.name+ '.in'
         self.input.write_input(infile, data=self)
@@ -199,7 +200,7 @@ class DakotaBase(Driver):
         expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
         for con in self.get_constraints().values():
             for c in con:
-               expressions.append(c)
+               expressions.append(-1*c)
                #Eexpressions.append(-1*self.get_constraints()[con])
         #if hasattr(self, 'get_eq_constraints'):
         #    expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
@@ -230,10 +231,8 @@ class DakotaBase(Driver):
                 self.raise_exception('Hessians not supported yet',
                                      NotImplementedError)
 
-        print('pdp3')
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
         #self._logger.debug('returning %s', retval)
-        print 'returning ',len(retval['fns'])
         return retval
 
 
@@ -312,8 +311,11 @@ class DakotaBase(Driver):
         ########### 
         objectives = self.get_objectives()
         for key in self.input.responses:
-            if key =='objective_functions': self.input.responses[key] = len(objectives)
-            if key =='response_functions': self.input.responses[key] = len(objectives)
+            if not self.ouu:
+               if key =='objective_functions': self.input.responses[key] = len(objectives)
+               if key =='response_functions': self.input.responses[key] = len(objectives)
+            else:
+               if key =='objective_functions': self.input.responses[key] = 2
             if key == 'nonlinear_inequality_constraints' :
                 conlist = []
                 cons = self.get_constraints()
@@ -450,7 +452,8 @@ class DakotaBase(Driver):
 
            cons = []
            for con in self.get_constraints():
-              cons.append(-1*self.get_constraints()[con])
+              for c in self.get_constraints()[con]:
+                 cons.append(-1*c)
            notnormps = [p[0] for p in parameters]
            for x in self.reg_params:
              if x[0] in notnormps: notnormps.remove(x[0])
@@ -458,7 +461,7 @@ class DakotaBase(Driver):
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3 %s\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(' '.join(["0 0" for _ in range(len(cons[0]))]), ' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params]), ' '.join(["1 3" for _ in range(len(cons[0]))]))]
            names = [s[0] for s in parameters]
 
-           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons[0]))))]
+           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons))))]
            varlist = self.input.variables
            #ln = varlist[0].split()
            #ln[0] = 'continuous_state'
@@ -490,7 +493,6 @@ class DakotaBase(Driver):
         for var in self.special_distribution_variables:
              if var in parameters: self.remove_parameter(var)
              self.add_desvar(var)#,low= -999, high = 999)
-             print ('add3d %s %d'%(var,var in parameters))
              #self.add_param(var)#,low= -999, high = 999)
              #self.add_parameter(var,low= -999, high = 999)
 
@@ -677,7 +679,8 @@ class pydakdriver(DakotaBase):
 
         # default definitions for set_variables
         self.ouu = False
-        self.stdMult = 0.
+        self.stdMult = 1.
+        self.meanMult = 1.
         self.need_start = False 
         self.uniform = False
         self.need_bounds = True
@@ -695,6 +698,7 @@ class pydakdriver(DakotaBase):
         self.convergence_tolerance = '1.e-8'
         self.max_iterations = 2000
         self.fd_gradient_step_size = '1e-8'
+        self.final_solutions = 8
 
  
         if name: self.name = name
@@ -756,9 +760,17 @@ class pydakdriver(DakotaBase):
             self.hessians()
         if opt_type == 'moga':
             self.input.method["id_method"] = "'opt'"
-            self.input.method[opt_type] = "\t"
+            self.input.method[opt_type] = ""
+            self.input.method["output"] = "silent"
+            self.input.method["final_solutions"] = self.final_solutions
+            self.input.method["population_size"] = self.population_size
+            self.input.method["max_iterations"] = self.max_iterations
+            self.input.method["max_function_evaluations"] = self.max_function_evaluations
+            self.input.method["replacement_type"] = "unique_roulette_wheel"
         if opt_type == 'soga':
-            self.input.method[opt_type] = "\t"
+            #if ouu: self.input.method["moga"] = ""
+            #else: self.input.method[opt_type] = ""
+            self.input.method[opt_type] = ""
             self.input.method["convergence_type"] = "\taverage_fitness_tracker"
             self.input.method["population_size"] = self.population_size
             self.input.method["max_iterations"] = self.max_iterations
@@ -782,8 +794,8 @@ class pydakdriver(DakotaBase):
             self.input.method["model_pointer"] = "'f1dacem'"
             #self.input.method["model_pointer"] = "'f1m'" 
          
-            self.input.method["method\n\tid_method 'expf2'\n\tsampling\n\t\tsamples %d\n\tsample_type lhs\n\tmodel_pointer 'f2m'\n"%self.n_sub_samples] = ''
-            self.input.method["method\n\tid_method 'f1dace'\n\tsampling\n\tsample_type lhs\n\tsamples %d\n\tmodel_pointer 'f1dacem'\n"%self.n_sur_samples] = ''
+            self.input.method["method\n\tid_method 'expf2'\n\tsampling\n\t\toutput silent\n\t\tsamples %d\n\tsample_type lhs\n\tmodel_pointer 'f2m'\n"%self.n_sub_samples] = ''
+            self.input.method["method\n\tid_method 'f1dace'\n\tsampling\n\tsample_type lhs\n\toutput silent\n\n\tsamples %d\n\tmodel_pointer 'f1dacem'\n"%self.n_sur_samples] = ''
 
             #self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 1\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
 
@@ -824,6 +836,23 @@ class pydakdriver(DakotaBase):
             #self.seed = _SET_AT_RUNTIME
             self.samples=100
             
+            if UQ_type == 'fsu_quasi_mc':
+                self.input.method['fsu_quasi_mc'] = 'halton'
+                self.input.method['latinize'] = ''
+                self.input.method['samples'] = self.samples
+                self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
+            if UQ_type == 'stoch_collocation':
+                self.input.method['stoch_collocation'] = ''
+                self.input.method['sparse_grid_level'] = 3
+                self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
+            if UQ_type == 'polynomial_chaos':
+                self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
+                self.input.method['polynomial_chaos'] = ''
+                self.input.method['quadrature_order'] = 10
+                self.input.method['samples'] = 1000
+                #self.input.method['variance_based_decomp'] = ''
+                self.input.method['sample_type'] = _SET_AT_RUNTIME
+                #self.input.method['orthogonal_least_interpolation'] = '10' 
             if UQ_type == 'sampling':
                 self.need_start = False
                 self.uniform = True
