@@ -98,11 +98,16 @@ class DakotaBase(Driver):
 
         if self.ouu: 
 
+            conlist = []
+            cons = self.get_constraints()
+            for c in cons:
+               conlist.extend(cons[c])
             resline = self.input.responses[0].split()
             resline[0] = 'response_functions'
-            resline[2] = '1'
+            resline[2] = str( 1 )
+            #resline[2] = str( 1 + len(conlist) )
 
-            self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + self.input.responses[1] + ['\n']+ ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses[0] + self.input.responses[2:]
+            self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
 
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
@@ -197,11 +202,17 @@ class DakotaBase(Driver):
             #system.solve_nonlinear(metadata=metadata)
         #self.recorders.record_iteration(system, metadata)
 
+        #expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
+        #cons = self.get_constraints()
+        #for c in cons:
+        #       #expressions.append(-1*c)
+        #       expressions.append(-1*self.get_constraints()[con])
+
         expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
         for con in self.get_constraints().values():
             for c in con:
                expressions.append(-1*c)
-               #Eexpressions.append(-1*self.get_constraints()[con])
+
         #if hasattr(self, 'get_eq_constraints'):
         #    expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
         #if hasattr(self, 'get_ineq_constraints'):
@@ -209,29 +220,32 @@ class DakotaBase(Driver):
 
         fns = []
         fnGrads = []
+        #print 'ASV: ', asv
+        #print 'expressions: ',expressions
+
         for i in range(len(asv)):
         #for i, val in enumerate(expressions.values()):
             val = expressions[i]
 
             #fns.extend([val])
+            #if self.ouu:
+            #    fns.extend([a for a in expressions])
+            #else:
             if asv[i] & 1 or asv[i]==0:
-                #val = expr.evaluate(self.parent)
-                #if isinstance(val, list):
-                #if isinstance(val, array):
-                fns.extend([val])
-                #else:
-                #    fns.append(val)
+               fns.extend([val])
             if asv[i] & 2:
-               #val = expr.evaluate_gradient(self.parent)
+            #val = expr.evaluate_gradient(self.parent)
                fnGrads.extend([val])
-               #fnGrads.append([val])
-               # self.raise_exception('Gradients not supported yet',
-               #                      NotImplementedError)
+            #fnGrads.append([val])
+            # self.raise_exception('Gradients not supported yet',
+            #                      NotImplementedError)
             if asv[i] & 4:
-                self.raise_exception('Hessians not supported yet',
+               self.raise_exception('Hessians not supported yet',
                                      NotImplementedError)
 
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
+       # print 'asv was ',asv
+       # print 'returning ',retval
         #self._logger.debug('returning %s', retval)
         return retval
 
@@ -319,6 +333,7 @@ class DakotaBase(Driver):
             if key == 'nonlinear_inequality_constraints' :
                 conlist = []
                 cons = self.get_constraints()
+                #for cons in self.get_constraints().values():
                 for c in cons:
                      conlist.extend(cons[c])
                 if conlist: self.input.responses['nonlinear_inequality_constraints']=len(conlist)
@@ -461,6 +476,9 @@ class DakotaBase(Driver):
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3 %s\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(' '.join(["0 0" for _ in range(len(cons[0]))]), ' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params]), ' '.join(["1 3" for _ in range(len(cons[0]))]))]
            names = [s[0] for s in parameters]
 
+           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f \n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
+           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f %s\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join("1 2" for i in range(len(cons))) ," ".join("'%s'"%i for i in names))]
+           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
            self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons))))]
            varlist = self.input.variables
            #ln = varlist[0].split()
