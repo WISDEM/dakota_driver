@@ -336,7 +336,10 @@ class DakotaBase(Driver):
                 #for cons in self.get_constraints().values():
                 for c in cons:
                      conlist.extend(cons[c])
-                if conlist: self.input.responses['nonlinear_inequality_constraints']=len(conlist)
+                if conlist:  
+                      self.input.responses['nonlinear_inequality_constraints']=len(conlist)
+                      if self.ouu: self.input.responses['nonlinear_inequality_upper_bounds']="%s"%(' '.join(".1" for _ in range(len(conlist))))
+                       
                 else: self.input.responses['nonlinear_inequality_constraints']='0'
             #   if ineq_constraints: self.input.responses[key] = ineq_constraints
             #   else: self.input.responses.pop(key)
@@ -479,7 +482,10 @@ class DakotaBase(Driver):
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f \n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f %s\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join("1 2" for i in range(len(cons))) ," ".join("'%s'"%i for i in names))]
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
-           self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons))))]
+           if cons:
+              self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons))))]
+           else:
+              self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
            varlist = self.input.variables
            #ln = varlist[0].split()
            #ln[0] = 'continuous_state'
@@ -770,6 +776,7 @@ class pydakdriver(DakotaBase):
         for c in cons:
            conlist.extend(cons[c])
         self.input.responses['nonlinear_inequality_constraints']=len(conlist)
+        #self.input.responses['nonlinear_inequality_upper_bounds']="%s"%(' '.join(".1" for _ in range(len(conlist))))
         if opt_type == 'optpp_newton':
             self.need_start=True
             self.need_bounds=True
