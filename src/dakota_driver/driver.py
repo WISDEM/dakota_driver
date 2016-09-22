@@ -104,8 +104,8 @@ class DakotaBase(Driver):
                conlist.extend(cons[c])
             resline = self.input.responses[0].split()
             resline[0] = 'response_functions'
-            resline[2] = str( 1 )
-            #resline[2] = str( 1 + len(conlist) )
+            #resline[2] = str( 1 )
+            resline[2] = str( 1 + len(conlist) )
 
             self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
 
@@ -402,7 +402,6 @@ class DakotaBase(Driver):
                 for i, val in enumerate(dvars[param]):
                     parameters.append([param+'['+str(i)+']', val])
                     self.array_desvars.append(param+'['+str(i)+']')
-        #parameters = self.get_parameters()
         if parameters:
             if uniform:
                 self.input.variables = [
@@ -472,6 +471,14 @@ class DakotaBase(Driver):
            for con in self.get_constraints():
               for c in self.get_constraints()[con]:
                  cons.append(-1*c)
+
+
+           secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
+           j = 0
+           for i in range(len(cons)):
+               secondary_responses[i][j+1] = 1
+               j+=1
+
            notnormps = [p[0] for p in parameters]
            for x in self.reg_params:
              if x[0] in notnormps: notnormps.remove(x[0])
@@ -483,7 +490,7 @@ class DakotaBase(Driver):
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f %s\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join("1 2" for i in range(len(cons))) ," ".join("'%s'"%i for i in names))]
            #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
            if cons:
-              self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names), " ".join("1 2" for i in range(len(cons))))]
+              self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0 %s\n0 %f %s\n    primary_variable_mapping %s\nsecondary_response_mapping \n%s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, " ".join(" 0 0 " for _ in range(len(cons))), self.stdMult, " ".join(" 0 0 " for _ in range(len(cons))), " ".join("'%s'"%i for i in names), " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))]
            else:
               self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
            varlist = self.input.variables
