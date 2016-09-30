@@ -105,10 +105,7 @@ class DakotaBase(Driver):
             resline = self.input.responses[0].split()
             resline[0] = 'response_functions'
             #resline[2] = str( 1 )
-            if self.compromise:
-                 resline[2] = str( 1 + len(conlist) )
-            else:
-                 resline[2] = str( 1 )
+            resline[2] = str( 1 + len(conlist) )
 
             self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
 
@@ -787,13 +784,14 @@ class pydakdriver(DakotaBase):
                   self.input.responses.pop(key)
          # todo: Create Hessian default with options
 
-    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False, ouu=False, compromise=False):
+    def Optimization(self,opt_type='optpp_newton', interval_type = 'forward', surrogate_model=False, ouu=False, compromise=False, sub_sample_type='polynomial_chaos' ):
         self.input.method["id_method"] = "'opt'"
         self.input.responses['objective_functions']=_SET_AT_RUNTIME
         cons = self.get_constraints()
         write_res = True
         if compromise: self.compromise = True
         else: self.compromise = False
+        if ouu: self.sub_sample_type = sub_sample_type
         conlist = []
         for c in cons:
            conlist.extend(cons[c])
@@ -841,8 +839,13 @@ class pydakdriver(DakotaBase):
             self.input.method["model_pointer"] = "'f1dacem'"
             #self.input.method["model_pointer"] = "'f1m'" 
          
-            self.input.method["method\n\tid_method 'expf2'\n\tsampling\n\t\toutput silent\n\t\tsamples %d\n\tsample_type lhs\n\tmodel_pointer 'f2m'\n"%self.n_sub_samples] = ''
-            self.input.method["method\n\tid_method 'f1dace'\n\tsampling\n\tsample_type lhs\n\toutput silent\n\n\tsamples %d\n\tmodel_pointer 'f1dacem'\n"%self.n_sur_samples] = ''
+            if self.sub_sample_type == 'polynomial_chaos':
+               self.input.method["method\n\tid_method 'expf2'\n\tpolynomial_chaos\n\t\toutput silent\n\t\tsamples %d\n\tsample_type lhs\n\tmodel_pointer 'f2m'\n\tcollocation_ratio 2\n\texpansion_order 2\n"%self.n_sub_samples] = ''
+               #self.input.method["method\n\tid_method 'f1dace'\n\tsampling\n\tsample_type lhs\n\toutput silent\n\n\tsamples %d\n\tmodel_pointer 'f1dacem'\n"%self.n_sur_samples] = ''
+            else:
+               self.input.method["method\n\tid_method 'expf2'\n\tsampling\n\t\toutput silent\n\t\tsamples %d\n\tsample_type lhs\n\tmodel_pointer 'f2m'\n"%self.n_sub_samples] = ''
+               #self.input.method["method\n\tid_method 'f1dace'\n\tsampling\n\tsample_type lhs\n\toutput silent\n\n\tsamples %d\n\tmodel_pointer 'f1dacem'\n"%self.n_sur_samples] = ''
+               
 
             #self.input.model = ["  id_model 'f4m'\n  nested\n    sub_method_pointer 'expf3'\n  variables_pointer 'x1only'\n  responses_pointer 'f4r'\n  primary_response_mapping 1 1\n\nmodel\n  id_model 'f3m'\n    surrogate global kriging surfpack\n  variables_pointer 'x1statex2'\n  responses_pointer 'f3r' \n  dace_method_pointer 'f3dace'\n\nmodel\n  id_model 'f3dacem'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f3r'  \n  interface_pointer 'pydak'"]
 
@@ -896,9 +899,9 @@ class pydakdriver(DakotaBase):
                 self.input.responses['num_response_functions'] = _SET_AT_RUNTIME
                 self.input.method['polynomial_chaos'] = ''
                 self.input.method['quadrature_order'] = 10
-                self.input.method['samples'] = 1000
+                #self.input.method['samples'] = 1000
                 #self.input.method['variance_based_decomp'] = ''
-                self.input.method['sample_type'] = _SET_AT_RUNTIME
+                #self.input.method['sample_type'] = _SET_AT_RUNTIME
                 #self.input.method['orthogonal_least_interpolation'] = '10' 
             if UQ_type == 'sampling':
                 self.need_start = False

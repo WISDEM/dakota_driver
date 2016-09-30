@@ -53,14 +53,14 @@ root.connect('p2.y', 'p.y')
 
 drives = pydakdriver(name = 'top.driver')
 #drives.Optimization()
-#drives.Optimization(opt_type='soga', ouu=0)
-drives.UQ()
+drives.Optimization(opt_type='conmin', ouu=0)
+#drives.UQ()
 top.driver = drives
 #top.driver = ScipyOptimizer()
 #top.driver.options['optimizer'] = 'SLSQP'
 
 top.driver.add_desvar('p2.y', lower=-50, upper=50)
-top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=.02, lower_bounds=-30, upper_bounds=30)
+#top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=.02, lower_bounds=-30, upper_bounds=30)
 top.driver.samples = 10
 top.driver.dakota_hotstart = False
 #top.driver.add_desvar('p1.x', lower=-50, upper=50)
