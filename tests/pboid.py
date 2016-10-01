@@ -22,7 +22,6 @@ class Paraboloid(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
         """
-        print ('hey')
 
         x = params['x']
         y = params['y']
