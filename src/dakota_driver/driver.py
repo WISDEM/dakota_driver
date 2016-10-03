@@ -250,78 +250,30 @@ class DakotaBase(Driver):
         #self._logger.debug('returning %s', retval)
         return retval
 
-
+    # We fully configure the input just before running the analysis as the user is liable to set
+    # several aspects of the optimization problem after calling pydakdriver.
+    # We only set the variables and responses blocks here, as the other input blocks are not dependant on
+    # additional configurations to the analysis.
     def configure_input(self, problem):
         """ Configures input specification, must be overridden. """
 
-        ######## 
-       # method #
-        ######## 
-
-        #for i in range(len(self.input.methods)):
-        #   n_params = len(self._desvars.keys())
-        #   ineq_constraints = self.get_constraints()
-        #   for key in self.input.methods[i]:
-        #      self.input.methods[i][key] =
-
-        ########### 
+        ###########
        # variables #
-        ########### 
+        ###########
         self.set_variables(need_start=self.need_start,
                            uniform=self.uniform,
                            need_bounds=self.need_bounds)
-        ########### 
+        ###########
        # responses #
-        ########### 
-        #objectives = self.get_objectives()
-        #for key in self.input.responses[i]:
-        #    if not self.ouu:
-        #       if key =='objective_functions': self.input.responses[key] = len(objectives)
-        #       if key =='response_functions': self.input.responses[key] = len(objectives)
-        #    else:
-        #       if key =='objective_functions': 
-        #          if self.compromise: 
-        #              self.input.responses[key] = 1
-        #          else:
-        #              self.input.responses[key] = 2
-        #    if key == 'nonlinear_inequality_constraints' :
-        #        conlist = []
-        #        cons = self.get_constraints()
-        #        for c in cons:
-        #             conlist.extend(cons[c])
-        #        if conlist:  
-        #              self.input.responses['nonlinear_inequality_constraints']=len(conlist)
-        #              if self.ouu: self.input.responses['nonlinear_inequality_upper_bounds']="%s"%(' '.join(".1" for _ in range(len(conlist))))
-        #               
-        #        else: self.input.responses['nonlinear_inequality_constraints']='0'
-
-        #    if key == 'interval_type': 
-        #       self.input.responses = collections.OrderedDict([(key+' '+self.interval_type, v) if k == key else (k, v) for k, v in self.input.responses.items()])
-
-        #    if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
-
-
-        #    if key == 'num_response_functions': self.input.responses[key] = len(objectives)
-
-        #    if key == 'response_descriptors': 
-        #        names = ['%r' % name for name in objectives.keys()]
-        #        self.input.responses[key] = ' '.join(names)
-
-        ##################################################
-       # Verify that all input fields have been adressed #
-        ##################################################
-        def assignment_enforcemer(tag,val):
-             if val == _SET_AT_RUNTIME: raise ValueError(str(tag)+ " NOT DEFINED")
-       # for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
-        print 'hey self.input responses is ', self.input.responses
-        #for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
+        ###########
+        objectives = self.get_objectives()
 
         #############################################################
-       # map method and response from ordered dictionaries to lists  #
-       #                                                             #
-       # convention is if the value is an empty string there will be #
-       #    no equals sign. Otherwise, data will be inoyt to dakota  #
-       #    as "{key} = {associated value}"                          #
+       # map method and response from ordered dictionaries to lists
+       #
+       # convention is if the value is an empty string there will be
+       #    no equals sign. Otherwise, data will be inoyt to dakota
+       #    as "{key} = {associated value}"
         #############################################################
         temp_list = []
         for i in range(len(self.methods)):
@@ -343,13 +295,14 @@ class DakotaBase(Driver):
 
         self.configured = 1
 
-    #def execute(self):
+    # This is the entry point to initialize the analysis run
     def run(self, problem):
         """ Write DAKOTA input and run. """
         self.configure_input(problem) 
         #if not self.configured: self.configure_input(problem) # this limits configuration to one time
         self.run_dakota()
 
+    # this is part of the configure_unput function
     def set_variables(self, need_start, uniform=False, need_bounds=True):
         """ Set :class:`DakotaInput` ``variables`` section. """
 
@@ -385,8 +338,6 @@ class DakotaBase(Driver):
                     '  initial_point %s' % ' '.join(str(s) for s in initial))
     
             if need_bounds:
-                #lbounds = [str(val) for val in self.get_lower_bounds(dtype=None)]
-                #ubounds = [str(val) for val in self.get_upper_bounds(dtype=None)]
                 lbounds = []
                 for val in self._desvars.values():
                     if isinstance(val["lower"], collections.Iterable):
@@ -535,6 +486,7 @@ class DakotaBase(Driver):
        self.weibull_betas = []
        self.weibull_descriptors = []
 
+    # adds a probability variable. This concept is unique to pydakdriver.
     def add_special_distribution(self, var, dist, alpha = _SET_AT_RUNTIME, beta = _SET_AT_RUNTIME, 
                                  mean = _SET_AT_RUNTIME, std_dev = _SET_AT_RUNTIME,
                                  lower_bounds = _SET_AT_RUNTIME, upper_bounds = _SET_AT_RUNTIME ):
@@ -623,7 +575,6 @@ class pydakdriver(DakotaBase):
     def __init__(self, name=None):
         super(pydakdriver, self).__init__()
         #self.input.method = collections.OrderedDict()
-        self.methods=[]
         #self.input.responses = collections.OrderedDict()
 
         # default definitions for set_variables
@@ -666,17 +617,31 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
-    def add_method(self, method_type='optimization', method='conmin', response_type=None):
+    def add_method(self, method='conmin', method_options={}, model='single', model_options={}, variable_mapping=None,
+                   response_type=None, gradients=False, hessians=False):
+        self.input.method.append(OrderedDict())
+        self.input.model.append(OrderedDict())
+        self.input.responses.append(OrderedDict())
+        self.input.variables.append(OrderedDict())
 
-        # whether to use response_functions or objective_functions 
+        self.input.method[-1]['method'] = method
+        for opt in method_options: self.input.method[-1][opt] = method_options[opt]
+
+        self.input.model[-1]['method'] = model
+        for opt in model_options: self.input.model[-1][opt] = model_options[opt]
+
         if not response_type:
-            if method_type == 'optimization':
-                self.input.responses.append('responses \n objective_functions 1 \n no_gradients\nno_hessians')
-            elif method_type =='UQ':
-                self.input.responses.append('responses \n response_functions 1 \n no_gradients\nno_hessians')
-        
-        self.methods.append({'method':method})
+            if method in ['conmin']: response_type='o'
+            else: raise TypeError("please specify response_type. %s is not a known method."%method)
+        if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
 
+        self.input.responses[-1]["responses"]=''
+        if response_type=='o':
+            self.input.responses[-1]["objective_functions"] = 1
+        else:
+            self.input.responses[-1]["response_functions"] = 1
+        if not gradients: self.input.responses[-1]["no gradients"] = ''
+        if not hessians:  self.input.responses[-1]["no hessians"] = ''
     def analytical_gradients(self):
          self.interval_type = 'forward'
          for key in self.input.responses:
@@ -838,3 +803,4 @@ class pydakdriver(DakotaBase):
             self.input.responses['no_gradients'] = ''
             self.input.responses['no_hessians'] = ''
 ################################################################################
+
