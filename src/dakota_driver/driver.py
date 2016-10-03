@@ -89,8 +89,9 @@ class DakotaBase(Driver):
         if not parameters:
             self.raise_exception('No parameters, run aborted', ValueError)
 
-        if not self.input.method:
-            self.raise_exception('Method not set', ValueError)
+        if not self.methods:
+            #self.raise_exception('Method not set', ValueError)
+            raise ValueError('Method not set')
         if not self.input.variables:
             self.raise_exception('Variables not set', ValueError)
         if not self.input.responses:
@@ -256,60 +257,12 @@ class DakotaBase(Driver):
         ######## 
        # method #
         ######## 
-        n_params = len(self._desvars.keys())
-        #if hasattr(self, 'get_ineq_constraints'): ineq_constraints = self.total_ineq_constraints()
-        if hasattr(self, 'get_constraints'): ineq_constraints = self.get_constraints()
-        else: ineq_constraints = False
-        for key in self.input.method:
-            if key == 'output': self.input.method[key] = self.output[0]
-            if key == 'max_iterations': self.input.method[key] = self.max_iterations
-            if key == 'max_function_evaluations': self.input.method[key] = self.max_function_evaluations
-            if key == 'convergence_tolerance': self.input.method[key] = self.convergence_tolerance
-            if key == 'fd_gradient_step_size': self.input.method[key] = self.fd_gradient_step_size
-            if key == 'constraint_tolerance': 
-               if ineq_constraints: self.input.method[key] = self.constraint_tolerance
-               else: self.input.method.pop(key) 
-            if key == 'seed': self.input.method[key] = self.seed
 
-            # optimization
-            if key == 'conmin':
-                #self.set_variables(need_start=True)
-                if ineq_constraints: 
-                    conmeth = 'conmin_mfd'
-                else: 
-                     conmeth = 'conmin_frcg'
-                self.input.method = collections.OrderedDict([
-                     (conmeth, v) if k == key else (k, v) for k, v in self.input.method.items()])
-            if key == 'partitions':
-                if len(self.partitions) != self.total_parameters():
-                    self.raise_exception('#partitions (%s) != #parameters (%s)'
-                                 % (len(self.partitions), self.total_parameters()),
-                                 ValueError)
-                partitions = [str(partition) for partition in self.partitions]
-                self.input.method[key] = ' '.join(partitions)
-
-            if key == 'vector_parameter_study':
-                if len(self.final_point) != n_params:
-                    self.raise_exception('#final_point (%s) != #parameters (%s)'
-                                 % (len(self.final_point), n_params),
-                                 ValueError)
-                final_point = [str(point) for point in self.final_point]
-            if key == 'final_point': self.input.method[key] = ' '.join(final_point)
-            if key == 'step_vector': self.input.method[key] = ' '.join([str(s) for s in self.step_vector])
-            if key == 'num_steps': self.input.method[key] = self.num_steps
-            if key == 'steps_per_variable': self.input.method[key] = self.steps_per_variable
-            if key == 'list_of_points': self.input.method[key] = '\n'.join(' '.join(str(j) for j in i) for i in self.list_of_points)
-
-            if key == 'sample_type': self.input.method[key] = self.sample_type
-            if key == 'samples': self.input.method[key] = self.samples
-        
-            # surrogate model
-            if key == "surrogate": 
-               self.input.method["model_pointer"] = "'surr'\n"
-               self.input.method["method"] = "\n\t\tid_method 'dace'\n\t\tsampling\n\t\tsamples %i\n\t\tmodel_pointer 'sim'"%self.samples
-               self.input.model = ["id_model 'surr'", "surrogate global gaussian_process surfpack",
-                                "dace_method_pointer 'dace'\n", "model", "id_model 'sim'","\tsingle"]
-               self.input.method.pop(key)
+        #for i in range(len(self.input.methods)):
+        #   n_params = len(self._desvars.keys())
+        #   ineq_constraints = self.get_constraints()
+        #   for key in self.input.methods[i]:
+        #      self.input.methods[i][key] =
 
         ########### 
        # variables #
@@ -320,46 +273,48 @@ class DakotaBase(Driver):
         ########### 
        # responses #
         ########### 
-        objectives = self.get_objectives()
-        for key in self.input.responses:
-            if not self.ouu:
-               if key =='objective_functions': self.input.responses[key] = len(objectives)
-               if key =='response_functions': self.input.responses[key] = len(objectives)
-            else:
-               if key =='objective_functions': 
-                  if self.compromise: 
-                      self.input.responses[key] = 1
-                  else:
-                      self.input.responses[key] = 2
-            if key == 'nonlinear_inequality_constraints' :
-                conlist = []
-                cons = self.get_constraints()
-                #for cons in self.get_constraints().values():
-                for c in cons:
-                     conlist.extend(cons[c])
-                if conlist:  
-                      self.input.responses['nonlinear_inequality_constraints']=len(conlist)
-                      if self.ouu: self.input.responses['nonlinear_inequality_upper_bounds']="%s"%(' '.join(".1" for _ in range(len(conlist))))
-                       
-                else: self.input.responses['nonlinear_inequality_constraints']='0'
-            #   if ineq_constraints: self.input.responses[key] = ineq_constraints
-            #   else: self.input.responses.pop(key)
-            if key == 'interval_type': 
-               self.input.responses = collections.OrderedDict([(key+' '+self.interval_type, v) if k == key else (k, v) for k, v in self.input.responses.items()])
-            if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
+        #objectives = self.get_objectives()
+        #for key in self.input.responses[i]:
+        #    if not self.ouu:
+        #       if key =='objective_functions': self.input.responses[key] = len(objectives)
+        #       if key =='response_functions': self.input.responses[key] = len(objectives)
+        #    else:
+        #       if key =='objective_functions': 
+        #          if self.compromise: 
+        #              self.input.responses[key] = 1
+        #          else:
+        #              self.input.responses[key] = 2
+        #    if key == 'nonlinear_inequality_constraints' :
+        #        conlist = []
+        #        cons = self.get_constraints()
+        #        for c in cons:
+        #             conlist.extend(cons[c])
+        #        if conlist:  
+        #              self.input.responses['nonlinear_inequality_constraints']=len(conlist)
+        #              if self.ouu: self.input.responses['nonlinear_inequality_upper_bounds']="%s"%(' '.join(".1" for _ in range(len(conlist))))
+        #               
+        #        else: self.input.responses['nonlinear_inequality_constraints']='0'
 
-            if key == 'num_response_functions': self.input.responses[key] = len(objectives)
-            if key == 'response_descriptors': 
-                names = ['%r' % name for name in objectives.keys()]
-                self.input.responses[key] = ' '.join(names)
+        #    if key == 'interval_type': 
+        #       self.input.responses = collections.OrderedDict([(key+' '+self.interval_type, v) if k == key else (k, v) for k, v in self.input.responses.items()])
+
+        #    if key == 'fd_gradient_step_size': self.input.responses[key] = self.fd_gradient_step_size
+
+
+        #    if key == 'num_response_functions': self.input.responses[key] = len(objectives)
+
+        #    if key == 'response_descriptors': 
+        #        names = ['%r' % name for name in objectives.keys()]
+        #        self.input.responses[key] = ' '.join(names)
 
         ##################################################
        # Verify that all input fields have been adressed #
         ##################################################
         def assignment_enforcemer(tag,val):
              if val == _SET_AT_RUNTIME: raise ValueError(str(tag)+ " NOT DEFINED")
-        for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
-        for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
+       # for key in self.input.method: assignment_enforcemer(key,self.input.method[key])
+        print 'hey self.input responses is ', self.input.responses
+        #for key in self.input.responses: assignment_enforcemer(key,self.input.responses[key])
 
         #############################################################
        # map method and response from ordered dictionaries to lists  #
@@ -369,17 +324,21 @@ class DakotaBase(Driver):
        #    as "{key} = {associated value}"                          #
         #############################################################
         temp_list = []
-        for key in self.input.method:
-            if self.input.method[key]:
-                temp_list.append(str(key) + ' = '+str(self.input.method[key]))
-            else: temp_list.append(key)
+        for i in range(len(self.methods)):
+          for key in self.input.method:
+                temp_list.append(key)
+            #if self.input.methods[i][key]:
+            #    temp_list.append(str(key) + ' = '+str(self.input.methods[i][key]))
+            #else: temp_list.append(key)
         self.input.method = temp_list
 
         temp_list = []
-        for key in self.input.responses:
-            if self.input.responses[key]:
-                temp_list.append(str(key) + ' = '+str(self.input.responses[key]))
-            else: temp_list.append(key)
+        for i in range(len(self.input.responses)):
+            for key in self.input.responses[i]:
+                temp_list.append(key)
+             #   if self.input.responses[i][key]:
+             #       temp_list.append(str(key) + ' = '+str(self.input.responses[i][key]))
+             #   else: temp_list.append(key)
         self.input.responses = temp_list
 
         self.configured = 1
@@ -387,7 +346,8 @@ class DakotaBase(Driver):
     #def execute(self):
     def run(self, problem):
         """ Write DAKOTA input and run. """
-        if not self.configured: self.configure_input(problem) # this limits configuration to one time
+        self.configure_input(problem) 
+        #if not self.configured: self.configure_input(problem) # this limits configuration to one time
         self.run_dakota()
 
     def set_variables(self, need_start, uniform=False, need_bounds=True):
@@ -453,80 +413,28 @@ class DakotaBase(Driver):
                 '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names)
             )
         
-
-        if self.ouu:
-           self.input.environment.append("  method_pointer 'opt'")
-
-#           dvars = self.get_desvars()
-#           parameters = [] # [ [name, value], ..]
-#           self.reg_params = parameters
-#           for param in dvars.keys():
-#            if len( dvars[param]) == 1:
-#                parameters.append( [param, dvars[param][0]])
-#            else:
-#                for i, val in enumerate(dvars[param]):
-#                    parameters.append([param+'['+str(i)+']', val])
-#                    self.array_desvars.append(param+'['+str(i)+']')
-
-           cons = []
-           for con in self.get_constraints():
+            cons = []
+            for con in self.get_constraints():
               for c in self.get_constraints()[con]:
                  cons.append(-1*c)
 
-
-           secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
-           j = 0
-           for i in range(len(cons)):
+            secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
+            j = 0
+            for i in range(len(cons)):
                secondary_responses[i][j+1] = 1
                j+=1
 
-           notnormps = [p[0] for p in parameters]
-           for x in self.reg_params:
+            notnormps = [p[0] for p in parameters]
+            for x in self.reg_params:
              if x[0] in notnormps: notnormps.remove(x[0])
-           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 0\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params])]
-           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping 1 3 %s\n    primary_variable_mapping %s\nsecondary_response_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(' '.join(["0 0" for _ in range(len(cons[0]))]), ' '.join( "'"+str(nam)+"'" for nam in [s[0] for s in self.reg_params]), ' '.join(["1 3" for _ in range(len(cons[0]))]))]
-           names = [s[0] for s in parameters]
+            names = [s[0] for s in parameters]
 
-           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f \n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
-           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f %s\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join("1 2" for i in range(len(cons))) ," ".join("'%s'"%i for i in names))]
-           #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
-           if cons:
-
-              if self.compromise:
-                  #self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f %f %s\n primary_variable_mapping %s\nsecondary_response_mapping \n%s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join(" 0 0 " for _ in range(len(cons))), " ".join("'%s'"%i for i in names), " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))]
-                  self.input.model = ["  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f %f %s\n primary_variable_mapping %s\nsecondary_response_mapping \n%s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join(" 0 0 " for _ in range(len(cons))), " ".join("'%s'"%i for i in names), " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))]
-              else:
-                  self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f %f %s\n0 %f %s\n    primary_variable_mapping %s\nsecondary_response_mapping \n%s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult, " ".join(" 0 0 " for _ in range(len(cons))), self.stdMult, " ".join(" 0 0 " for _ in range(len(cons))), " ".join("'%s'"%i for i in names), " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))]
-           else:
-              if self.compromise:
-                  self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
-              else:
-                  self.input.model = ["  id_model 'f1m'\n  surrogate global kriging surfpack\n  dace_method_pointer 'f1dace'\n  variables_pointer 'x1only'\n  responses_pointer 'f1r'\nmodel\n  id_model 'f1dacem'\n   nested\n   variables_pointer 'x1only'\n  responses_pointer 'f1r'\n   sub_method_pointer 'expf2'\n   primary_response_mapping %f 0\n0 %f\n    primary_variable_mapping %s\nmodel\n  id_model 'f2m'\n  single\n  variables_pointer 'x1andx2'\n  responses_pointer 'f2r'\n  interface_pointer 'pydak'"%(self.meanMult, self.stdMult," ".join("'%s'"%i for i in names))]
-           varlist = self.input.variables
-           #ln = varlist[0].split()
-           #ln[0] = 'continuous_state'
-           #varlist = [' '.join(ln)] + varlist[1:]
-           #blk1 = varlist
-           #blk2 = varlist
-           blk1 = ["   id_variables 'x1only'"] + varlist
-           #blk2 = ["variables\n  active all\n  id_variables 'x1andx2'"] + varlist
-           blk3 = ["variables\n  id_variables 'x1andx2'\n "] + ['continuous_state = %s' % len(parameters)]
-           #blk3 = ["variables\n  id_variables 'x1andx2'\n "] + ['continuous_design = %s' % len(parameters)]
-
-           #blk3 += [ 'continuous_design = %s\n' % len(parameters)] + ['  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names]
-           self.input.variables = blk1+['\n']+blk3
-           #self.input.variables = blk1+['\n']+blk2+['\n']+blk3
-
-           #print '*', self._desvars.values()
-           #print '*', self.get_constraint_metadata()
-           #print '*', parameters ; quit()
-
-           if need_bounds:
+            if need_bounds:
                 self.input.variables.extend([
                     '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
                     '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
 
-           self.input.variables.append(
+            self.input.variables.append(
                 '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
 
         # ------------ special distributions cases ------- -------- #
@@ -714,8 +622,9 @@ class pydakdriver(DakotaBase):
 
     def __init__(self, name=None):
         super(pydakdriver, self).__init__()
-        self.input.method = collections.OrderedDict()
-        self.input.responses = collections.OrderedDict()
+        #self.input.method = collections.OrderedDict()
+        self.methods=[]
+        #self.input.responses = collections.OrderedDict()
 
         # default definitions for set_variables
         self.ouu = False
@@ -756,6 +665,17 @@ class pydakdriver(DakotaBase):
     #      which allows the value to be set until runtime. if a key is associated with a value besides '' 
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
+
+    def add_method(self, method_type='optimization', method='conmin', response_type=None):
+
+        # whether to use response_functions or objective_functions 
+        if not response_type:
+            if method_type == 'optimization':
+                self.input.responses.append('responses \n objective_functions 1 \n no_gradients\nno_hessians')
+            elif method_type =='UQ':
+                self.input.responses.append('responses \n response_functions 1 \n no_gradients\nno_hessians')
+        
+        self.methods.append({'method':method})
 
     def analytical_gradients(self):
          self.interval_type = 'forward'
