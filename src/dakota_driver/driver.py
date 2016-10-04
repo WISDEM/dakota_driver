@@ -255,6 +255,7 @@ class DakotaBase(Driver):
         self.set_variables(need_start=self.need_start,
                            uniform=self.uniform,
                            need_bounds=self.need_bounds)
+        print 'yoooo ', self.input.reg_variables
         for i in range(len(self.input.responses)):
             if 'objective_functions' in self.input.responses[i]:
                 self.input.variables.append("\n".join(self.input.reg_variables))
@@ -283,10 +284,10 @@ class DakotaBase(Driver):
         temp_list = []
         for i in range(len(self.input.responses)):
             for key in self.input.responses[i]:
-                temp_list.append(key)
-             #   if self.input.responses[i][key]:
-             #       temp_list.append(str(key) + ' = '+str(self.input.responses[i][key]))
-             #   else: temp_list.append(key)
+                #temp_list.append(key)
+                if self.input.responses[i][key] or self.input.responses[i][key]==0:
+                    temp_list.append(str(key) + '  '+str(self.input.responses[i][key]))
+                else: temp_list.append(key)
         self.input.responses = temp_list
 
         self.configured = 1
@@ -317,8 +318,6 @@ class DakotaBase(Driver):
         self.input.reg_variables.append('continuous_design = %s' % len(parameters))
         self.input.special_variables.append('continuous_state = %s' % len(parameters))
 
-        self.input.reg_variables = []
-
         initial = [] # initial points of regular paramters
         for val in self.get_desvars().values():
             if isinstance(val, collections.Iterable):
@@ -344,6 +343,7 @@ class DakotaBase(Driver):
         self.input.special_variables.extend([
                 '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
                 '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
+ 
     
         names = [s[0] for s in parameters]
         self.input.reg_variables.append(
@@ -365,13 +365,13 @@ class DakotaBase(Driver):
              if x[0] in notnormps: notnormps.remove(x[0])
         names = [s[0] for s in parameters]
 
-        if need_bounds:
-                self.input.reg_variables.extend([
-                    '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
-                    '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
-
-        self.input.reg_variables.append(
-                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
+        #if need_bounds:
+        #        self.input.reg_variables.extend([
+        #            '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
+        #            '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
+#
+#        self.input.reg_variables.append(
+#                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
 
         # Add special distributions cases
         for var in self.special_distribution_variables:
@@ -617,7 +617,7 @@ class pydakdriver(DakotaBase):
             else: raise TypeError("please specify response_type. %s is not a known method."%method)
         if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
 
-        self.input.responses[-1]["responses"]=''
+        if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
         conlist = []
         cons = self.get_constraints()
         for c in cons:
@@ -628,6 +628,17 @@ class pydakdriver(DakotaBase):
         else:
             self.input.responses[-1]["response_functions"] = 1 + len(conlist)
         if not gradients: self.input.responses[-1]["no_gradients"] = ''
+        elif gradients == 'analytical':
+            self.input.responses[-1]['numerical_gradients'] = ''
+            self.input.responses[-1]['method_source dakota'] = ''
+            self.input.responses[-1]['interval_type'] = ''
+            self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
+        elif gradients == 'numerical':
+            self.input.responses[-1]['numerical_gradients'] = ''
+            self.input.responses[-1]['method_source dakota'] = ''
+            self.input.responses[-1]['interval_type'] = ''
+            self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
+        else: raise ValueError("Gradients %s not set as analytical or numerical"%gradients)
         if not hessians:  self.input.responses[-1]["no_hessians"] = ''
     def analytical_gradients(self):
          self.interval_type = 'forward'
