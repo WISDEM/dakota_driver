@@ -605,12 +605,18 @@ class pydakdriver(DakotaBase):
         #self.input.variables.append(collections.OrderedDict())
 
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
+        self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
+        self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
         self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
 
         if len(self.input.method) != 1: self.input.model[-1]['model'] = ''
+        self.input.model[-1]["id_model"] = "'mod%d'"%len(self.input.model)
+        if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%len(self.input.model)
         self.input.model[-1][model] = ''
+        #if model == 'nested':
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
+        self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
 
         if not response_type:
             if method in ['conmin frcg']: response_type='o'
@@ -618,6 +624,7 @@ class pydakdriver(DakotaBase):
         if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
 
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
+        self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
         conlist = []
         cons = self.get_constraints()
         for c in cons:

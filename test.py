@@ -53,6 +53,7 @@ root.connect('p2.y', 'p.y')
 drives = pydakdriver(name = 'top.driver')
 #drives.Optimization()
 #drives.Optimization(opt_type='conmin', ouu=1)
+#drives.add_method(response_type='r', method='sampling', gradients='numerical')
 drives.add_method(gradients='numerical')
 #drives.UQ()
 top.driver = drives
