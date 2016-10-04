@@ -186,18 +186,11 @@ class DakotaBase(Driver):
             dvl = dvlist + self._desvars.keys()
             for i  in range(len(cv)):
                 self.set_desvar(dvl[i], cv[i])
-        #self.set_parameters(cv)
-        #self.run_iteration()
         system = self.root
         metadata = self.metadata  = create_local_meta(None, 'pydakrun%d'%world.Get_rank())
         system.ln_solver.local_meta = metadata
         self.iter_count += 1
         update_local_meta(metadata, (self.iter_count,))
-        #with system._dircontext:
-            #system.apply_nonlinear(self)
-            #self._objfunc()
-            #system.problem.run()
-            #print('solving nonlinear')
         self.root.solve_nonlinear()
 
             #system.solve_nonlinear(metadata=metadata)
@@ -257,32 +250,35 @@ class DakotaBase(Driver):
     def configure_input(self, problem):
         """ Configures input specification, must be overridden. """
 
-        ###########
-       # variables #
-        ###########
+        # the scheme is that we need two formulations of the variables -
+        # one for UQ and one for optimization
         self.set_variables(need_start=self.need_start,
                            uniform=self.uniform,
                            need_bounds=self.need_bounds)
-        ###########
-       # responses #
-        ###########
+        for i in range(len(self.input.responses)):
+            if 'objective_functions' in self.input.responses[i]:
+                self.input.variables.append("\n".join(self.input.reg_variables))
+            elif 'response_functions' in self.input.responses[i]:
+                self.input.variables.append("\n".join(self.input.special_variables))
+            else: raise ValueError("could not find response or objective in repsonse block %d %s")%(i, '\n'.join(self.input.responses[i]))
         objectives = self.get_objectives()
 
-        #############################################################
-       # map method and response from ordered dictionaries to lists
-       #
-       # convention is if the value is an empty string there will be
-       #    no equals sign. Otherwise, data will be inoyt to dakota
-       #    as "{key} = {associated value}"
-        #############################################################
         temp_list = []
-        for i in range(len(self.methods)):
-          for key in self.input.method:
-                temp_list.append(key)
-            #if self.input.methods[i][key]:
-            #    temp_list.append(str(key) + ' = '+str(self.input.methods[i][key]))
-            #else: temp_list.append(key)
+        for i in range(len(self.input.method)):
+          for key in self.input.method[i]:
+                temp_list.append("%s  %s"%(key, self.input.method[i][key]))
+        self.methods = temp_list
         self.input.method = temp_list
+
+        temp_list = []
+        print "====+++ ", self.input.model
+        for i in range(len(self.input.model)):
+          for key in self.input.model[i]:
+                print '+++++===== ', self.input.model[i]
+                temp_list.append("%s  %s"%(key, self.input.model[i][key]))
+          #temp_list.append("\n".join(self.input.model[i]))
+        #self.model = temp_list
+        self.input.model = temp_list
 
         temp_list = []
         for i in range(len(self.input.responses)):
@@ -306,99 +302,85 @@ class DakotaBase(Driver):
     def set_variables(self, need_start, uniform=False, need_bounds=True):
         """ Set :class:`DakotaInput` ``variables`` section. """
 
-        dvars = self.get_desvars()
+        # Find regular parameters
         parameters = [] # [ [name, value], ..]
+        dvars = self.get_desvars()
         self.reg_params = parameters
         for param in dvars.keys():
             if len( dvars[param]) == 1:
-                parameters.append( [param, dvars[param][0]])
+                parameters.append([param, dvars[param][0]])
             else:
                 for i, val in enumerate(dvars[param]):
                     parameters.append([param+'['+str(i)+']', val])
                     self.array_desvars.append(param+'['+str(i)+']')
-        if parameters:
-            if uniform:
-                self.input.variables = [
-                    'uniform_uncertain = %s' % len(parameters)]
-                    #'uniform_uncertain = %s' % self.total_parameters()]
-            else:
-                self.input.variables = [
-                    'continuous_design = %s' % len(parameters)]
-                    #'continuous_design = %s' % self.total_parameters()]
+
+        self.input.reg_variables.append('continuous_design = %s' % len(parameters))
+        self.input.special_variables.append('continuous_state = %s' % len(parameters))
+
+        self.input.reg_variables = []
+
+        initial = [] # initial points of regular paramters
+        for val in self.get_desvars().values():
+            if isinstance(val, collections.Iterable):
+                initial.extend(val)
+            else: initial.append(val)
+        self.input.reg_variables.append(
+            '  initial_point %s' % ' '.join(str(s) for s in initial))
+        self.input.special_variables.append(
+            '  initial_point %s' % ' '.join(str(s) for s in initial))
+        lbounds = []
+        for val in self._desvars.values():
+            if isinstance(val["lower"], collections.Iterable):
+               lbounds.extend(val["lower"])
+            else: lbounds.append(val["lower"])
+        ubounds = []
+        for val in self._desvars.values():
+            if isinstance(val["upper"], collections.Iterable):
+                ubounds.extend(val["upper"])
+            else: ubounds.append(val["upper"])
+        self.input.reg_variables.extend([
+                '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
+                '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
+        self.input.special_variables.extend([
+                '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
+                '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
     
-            if need_start:
-                #initial = [str(val[0] for val in self.get_desvars().values()]
-                initial = []
-                for val in self.get_desvars().values():
-                    if isinstance(val, collections.Iterable):
-                        initial.extend(val)
-                    else: initial.append(val)
-                #initial = [str(val) for val in self.eval_parameters(dtype=None)]
-                self.input.variables.append(
-                    '  initial_point %s' % ' '.join(str(s) for s in initial))
-    
-            if need_bounds:
-                lbounds = []
-                for val in self._desvars.values():
-                    if isinstance(val["lower"], collections.Iterable):
-                        lbounds.extend(val["lower"])
-                    else: lbounds.append(val["lower"])
-                #lbounds = [str(val['lower']) for val in parameters.values()]
-                #ubounds = [str(val['upper']) for val in parameters.values()]
-                ubounds = []
-                for val in self._desvars.values():
-                    if isinstance(val["upper"], collections.Iterable):
-                        ubounds.extend(val["upper"])
-                    else: ubounds.append(val["upper"])
-                self.input.variables.extend([
-                    '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
-                    '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
-    
-            names = [s[0] for s in parameters]
-            #names = []
-            #for param in parameters.values():
-            #    for name in param.names:
-            #        names.append('%r' % name)
-    
-            self.input.variables.append(
-                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names)
-            )
-        
-            cons = []
-            for con in self.get_constraints():
+        names = [s[0] for s in parameters]
+        self.input.reg_variables.append(
+                '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
+
+        cons = []
+        for con in self.get_constraints():
               for c in self.get_constraints()[con]:
                  cons.append(-1*c)
 
-            secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
-            j = 0
-            for i in range(len(cons)):
+        secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
+        j = 0
+        for i in range(len(cons)):
                secondary_responses[i][j+1] = 1
                j+=1
 
-            notnormps = [p[0] for p in parameters]
-            for x in self.reg_params:
+        notnormps = [p[0] for p in parameters]
+        for x in self.reg_params:
              if x[0] in notnormps: notnormps.remove(x[0])
-            names = [s[0] for s in parameters]
+        names = [s[0] for s in parameters]
 
-            if need_bounds:
-                self.input.variables.extend([
+        if need_bounds:
+                self.input.reg_variables.extend([
                     '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
                     '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
 
-            self.input.variables.append(
+        self.input.reg_variables.append(
                 '  descriptors  %s' % ' '.join( "'"+str(nam)+"'" for nam in names))
 
-        # ------------ special distributions cases ------- -------- #
+        # Add special distributions cases
         for var in self.special_distribution_variables:
              if var in parameters: self.remove_parameter(var)
-             self.add_desvar(var)#,low= -999, high = 999)
-             #self.add_param(var)#,low= -999, high = 999)
-             #self.add_parameter(var,low= -999, high = 999)
-
-
+             self.add_desvar(var)
+        self.input.special_variables = []
         if self.normal_descriptors:
             #print(self.normal_means) ; quit()
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'normal_uncertain =  %s' % len(self.normal_means),
                 '  means  %s' % ' '.join(self.normal_means),
                 '  std_deviations  %s' % ' '.join(self.normal_std_devs),
@@ -406,24 +388,21 @@ class DakotaBase(Driver):
                 '  lower_bounds = %s' % ' '.join(self.normal_lower_bounds),
                 '  upper_bounds = %s' % ' '.join(self.normal_upper_bounds)
                 ])
-                   
         if self.lognormal_descriptors:
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'lognormal_uncertain = %s' % len(self.lognormal_means),
                 '  means  %s' % ' '.join(self.lognormal_means),
                 '  std_deviations  %s' % ' '.join(self.lognormal_std_devs),
                 "  descriptors  '%s'" % "' '".join(self.lognormal_descriptors)
                 ])
-                   
         if self.exponential_descriptors:
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'exponential_uncertain = %s' % len(self.exponential_descriptors),
                 '  betas  %s' % ' '.join(self.exponential_betas),
                 "  descriptors ' %s'" % "' '".join(self.exponential_descriptors)
                 ])
-                   
         if self.beta_descriptors:
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'beta_uncertain = %s' % len(self.beta_descriptors),
                 '  betas = %s' % ' '.join(self.beta_betas),
                 '  alphas = %s' % ' '.join(self.beta_alphas),
@@ -431,26 +410,23 @@ class DakotaBase(Driver):
                 '  lower_bounds = %s' % ' '.join(self.beta_lower_bounds),
                 '  upper_bounds = %s' % ' '.join(self.beta_upper_bounds)
                 ])
-
         if self.gamma_descriptors:
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'beta_uncertain = %s' % len(self.gamma_descriptors),
                 '  betas = %s' % ' '.join(self.gamma_betas),
                 '  alphas = %s' % ' '.join(self.gamma_alphas),
                 "  descriptors = '%s'" % "' '".join(self.gamma_descriptors)
                 ])
-
         if self.weibull_descriptors:
-            self.input.variables.extend([
+            self.input.special_variables.extend([
                 'weibull_uncertain = %s' % len(self.weibull_descriptors),
                 '  betas  %s' % ' '.join(self.weibull_betas),
                 '  alphas  %s' % ' '.join(self.weibull_alphas),
                 "  descriptors  '%s'" % "' '".join(self.weibull_descriptors)
                 ])
-        
 
-    
-# ---------------------------  special distributions ---------------------- #
+
+# ---------------------------  special distribution magic ---------------------- #
  
     def clear_special_variables(self):
        for var in self.special_distribution_variables:
@@ -576,6 +552,10 @@ class pydakdriver(DakotaBase):
         super(pydakdriver, self).__init__()
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
+        self.input.special_variables = []
+        self.methods = []
+        self.input.model = []
+        self.input.reg_variables = []
 
         # default definitions for set_variables
         self.ouu = False
@@ -617,31 +597,38 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
-    def add_method(self, method='conmin', method_options={}, model='single', model_options={}, variable_mapping=None,
+    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None,
                    response_type=None, gradients=False, hessians=False):
-        self.input.method.append(OrderedDict())
-        self.input.model.append(OrderedDict())
-        self.input.responses.append(OrderedDict())
-        self.input.variables.append(OrderedDict())
+        self.input.method.append(collections.OrderedDict())
+        self.input.model.append(collections.OrderedDict())
+        self.input.responses.append(collections.OrderedDict())
+        #self.input.variables.append(collections.OrderedDict())
 
-        self.input.method[-1]['method'] = method
+        if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
+        self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
 
-        self.input.model[-1]['method'] = model
+        if len(self.input.method) != 1: self.input.model[-1]['model'] = ''
+        self.input.model[-1][model] = ''
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
 
         if not response_type:
-            if method in ['conmin']: response_type='o'
+            if method in ['conmin frcg']: response_type='o'
             else: raise TypeError("please specify response_type. %s is not a known method."%method)
         if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
 
         self.input.responses[-1]["responses"]=''
+        conlist = []
+        cons = self.get_constraints()
+        for c in cons:
+            conlist.extend(cons[c])
         if response_type=='o':
-            self.input.responses[-1]["objective_functions"] = 1
+            self.input.responses[-1]["objective_functions"] = 1 if not uq_responses else uq_responses
+            self.input.responses[-1]['nonlinear_inequality_constraints'] = len(conlist)
         else:
-            self.input.responses[-1]["response_functions"] = 1
-        if not gradients: self.input.responses[-1]["no gradients"] = ''
-        if not hessians:  self.input.responses[-1]["no hessians"] = ''
+            self.input.responses[-1]["response_functions"] = 1 + len(conlist)
+        if not gradients: self.input.responses[-1]["no_gradients"] = ''
+        if not hessians:  self.input.responses[-1]["no_hessians"] = ''
     def analytical_gradients(self):
          self.interval_type = 'forward'
          for key in self.input.responses:
