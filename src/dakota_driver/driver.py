@@ -257,6 +257,8 @@ class DakotaBase(Driver):
                            need_bounds=self.need_bounds)
         print 'yoooo ', self.input.reg_variables
         for i in range(len(self.input.responses)):
+            if i !=0: self.input.variables.append('\nvariables\n')
+            self.input.variables.append("id_variables = 'vars%d'"%(i+1))
             if 'objective_functions' in self.input.responses[i]:
                 self.input.variables.append("\n".join(self.input.reg_variables))
             elif 'response_functions' in self.input.responses[i]:
@@ -617,6 +619,7 @@ class pydakdriver(DakotaBase):
         #if model == 'nested':
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
+        self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
 
         if not response_type:
             if method in ['conmin frcg']: response_type='o'
