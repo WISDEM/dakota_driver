@@ -398,14 +398,15 @@ class DakotaBase(Driver):
         vm = None
         for i in range(len(self.input.model)):
           for key in self.input.model[i]:
+                print '===> ',self.input.model, i
                 temp_list.append("%s  %s"%(key, self.input.model[i][key]))
                 if key == 'nested':
                     #if not self.input.model[i]['variable_mapping']:
                         vect = [0] *( len(conlist) + 1)
                         maps = []
-                        for i in range(len(conlist) + 1):
+                        for j in range(len(conlist) + 1):
                             s = vect
-                            s[i] = 1
+                            s[j] = 1
                             maps.append(s)
                         vm = "primary_response_mapping "+"\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps) 
                 if vm:
