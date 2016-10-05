@@ -392,20 +392,22 @@ class DakotaBase(Driver):
         for c in cons:
             conlist.extend(cons[c])
         temp_list = []
+        vm = None
         for i in range(len(self.input.model)):
           for key in self.input.model[i]:
                 temp_list.append("%s  %s"%(key, self.input.model[i][key]))
                 if key == 'nested':
-                    if not self.input.model[i]['variable_mapping']:
+                    #if not self.input.model[i]['variable_mapping']:
                         vect = [0] *( len(conlist) + 1)
                         maps = []
                         for i in range(len(conlist) + 1):
-                            print 'heeeyyy s is ',s
                             s = vect
                             s[i] = 1
                             maps.append(s)
-                        print 'maps: ',[s for s in maps]
-                        self.input.model[i]['variable_mapping'] = "\n".join(" ".join([str(a), str(a)] for a in  s) for s in maps)
+                        vm = "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
+                if vm:
+                   temp_list.append(vm)
+                   vm = None
         self.input.model = temp_list
 
         temp_list = []
@@ -616,7 +618,7 @@ class pydakdriver(DakotaBase):
         self.input.model[-1]["id_model"] = "'mod%d'"%len(self.input.model)
         if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%len(self.input.model)
         self.input.model[-1][model] = ''
-        self.input.model[-1]['variable_mapping'] = variable_mapping
+        #self.input.model[-1]['variable_mapping'] = variable_mapping
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
         self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
