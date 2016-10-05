@@ -300,6 +300,8 @@ class DakotaBase(Driver):
         names = [s[0] for s in parameters]
         self.input.reg_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
+        self.input.special_variables.append(
+            '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
 
         cons = []
         for con in self.get_constraints():
@@ -321,7 +323,6 @@ class DakotaBase(Driver):
         for var in self.special_distribution_variables:
             if var in parameters: self.remove_parameter(var)
             self.add_desvar(var)
-        self.input.special_variables = []
         if self.normal_descriptors:
             # print(self.normal_means) ; quit()
             self.input.special_variables.extend([
@@ -387,6 +388,8 @@ class DakotaBase(Driver):
         self.methods = temp_list
         self.input.method = temp_list
 
+        self.input.environment.append("method_pointer 'meth1'")
+
         conlist = []
         cons = self.get_constraints()
         for c in cons:
@@ -410,7 +413,6 @@ class DakotaBase(Driver):
                    temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
                    vm = None
         self.input.model = temp_list
-
         temp_list = []
         for i in range(len(self.input.responses)):
             for key in self.input.responses[i]:
@@ -617,8 +619,8 @@ class pydakdriver(DakotaBase):
         # model
         if len(self.input.method) != 1: self.input.model[-1]['model'] = ''
         self.input.model[-1]["id_model"] = "'mod%d'"%len(self.input.model)
-        if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%len(self.input.model)
         self.input.model[-1][model] = ''
+        if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
         #self.input.model[-1]['variable_mapping'] = variable_mapping
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)

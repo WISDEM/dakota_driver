@@ -55,7 +55,7 @@ drives = pydakdriver(name = 'top.driver')
 #drives.Optimization(opt_type='conmin', ouu=1)
 drives.add_method('soga', method_options = {'max_iterations':2, 'population_size':2}, model='nested')
 #drives.add_method(gradients='numerical', model='single')
-drives.add_method(response_type='r', model='singl', method='sampling', method_options = {'samples':30})
+drives.add_method(response_type='r', model='singl', method='sampling', method_options = {'samples':2})
 #drives.UQ()
 top.driver = drives
 #top.driver = ScipyOptimizer()
