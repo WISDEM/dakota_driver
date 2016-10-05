@@ -385,19 +385,20 @@ class DakotaBase(Driver):
         for i in range(len(cons)):
             secondary_responses[i][j + 1] = 1
             j += 1
+        notnormps = [p[0] for p in parameters]
         for x in self.reg_params:
             if x[0] in notnormps: notnormps.remove(x[0])
         names = [s[0] for s in parameters]
         conlist = []
         for c in self.get_constraints():
-            conlist.extend(cons[c])
+            conlist.extend(self.get_constraints()[c])
         temp_list = []
         vm = None
         for i in range(len(self.input.model)):
           for key in self.input.model[i]:
                 temp_list.append("%s  %s"%(key, self.input.model[i][key]))
                 if key == 'nested':
-                        vect = [0] *( self.input.n_objectives)
+                        vect = [0] *( self.input.n_objectives + len(cons))
                         maps = []
                         for j in range(self.input.n_objectives):
                             s = vect
@@ -408,11 +409,15 @@ class DakotaBase(Driver):
                 if vm:
                    temp_list.append(vm)
                    temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
-                   temp_list.append("secondary_response_mapping %s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
+                   temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
                    vm = None
         self.input.model = temp_list
         temp_list = []
         for i in range(len(self.input.responses)):
+            if 'objective_functions' in self.input.responses[i]:
+                self.input.responses[i]['nonlinear_inequality_constraints'] = len(cons)
+            if 'response_functions' in self.input.responses[i]:
+                self.input.responses[i]["response_functions"] = self.input.n_objectives + len(cons)
             for key in self.input.responses[i]:
                 #temp_list.append(key)
                 if self.input.responses[i][key] or self.input.responses[i][key]==0:
@@ -638,15 +643,10 @@ class pydakdriver(DakotaBase):
         if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
         self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
-        conlist = []
-        cons = self.get_constraints()
-        for c in cons:
-            conlist.extend(cons[c])
         if response_type=='o':
             self.input.responses[-1]["objective_functions"] = 1 if not uq_responses else uq_responses
-            self.input.responses[-1]['nonlinear_inequality_constraints'] = len(conlist)
         else:
-            self.input.responses[-1]["response_functions"] = 1 + len(conlist)
+            self.input.responses[-1]["response_functions"] = self.input.n_objectives 
         if not gradients: self.input.responses[-1]["no_gradients"] = ''
         elif gradients == 'analytical':
             self.input.responses[-1]['numerical_gradients'] = ''
