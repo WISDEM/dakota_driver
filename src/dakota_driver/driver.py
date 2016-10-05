@@ -409,8 +409,8 @@ class DakotaBase(Driver):
                 if vm:
                    temp_list.append(vm)
                    temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
-                   temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
-                   vm = None
+                   if cons: temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
+                   vm = 0
         self.input.model = temp_list
         temp_list = []
         for i in range(len(self.input.responses)):
