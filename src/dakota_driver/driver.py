@@ -303,22 +303,6 @@ class DakotaBase(Driver):
         self.input.special_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
 
-        cons = []
-        for con in self.get_constraints():
-            for c in self.get_constraints()[con]:
-                cons.append(-1 * c)
-
-        secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
-        j = 0
-        for i in range(len(cons)):
-            secondary_responses[i][j + 1] = 1
-            j += 1
-
-        notnormps = [p[0] for p in parameters]
-        for x in self.reg_params:
-            if x[0] in notnormps: notnormps.remove(x[0])
-        names = [s[0] for s in parameters]
-
         # Add special distributions cases
         for var in self.special_distribution_variables:
             if var in parameters: self.remove_parameter(var)
@@ -390,28 +374,41 @@ class DakotaBase(Driver):
 
         self.input.environment.append("method_pointer 'meth1'")
 
+        # Deal with variable mapping
+        cons = []
+        for con in self.get_constraints():
+            for c in self.get_constraints()[con]:
+                cons.append(-1 * c)
+
+        secondary_responses = [[0] + [0 for _ in range(len(cons))] for __ in range(len(cons))]
+        j = 0
+        for i in range(len(cons)):
+            secondary_responses[i][j + 1] = 1
+            j += 1
+        for x in self.reg_params:
+            if x[0] in notnormps: notnormps.remove(x[0])
+        names = [s[0] for s in parameters]
         conlist = []
-        cons = self.get_constraints()
-        for c in cons:
+        for c in self.get_constraints():
             conlist.extend(cons[c])
         temp_list = []
         vm = None
         for i in range(len(self.input.model)):
           for key in self.input.model[i]:
-                print '===> ',self.input.model, i
                 temp_list.append("%s  %s"%(key, self.input.model[i][key]))
                 if key == 'nested':
-                    #if not self.input.model[i]['variable_mapping']:
-                        vect = [0] *( len(conlist) + 1)
+                        vect = [0] *( self.input.n_objectives)
                         maps = []
-                        for j in range(len(conlist) + 1):
+                        for j in range(self.input.n_objectives):
                             s = vect
                             s[j] = 1
                             maps.append(s)
-                        vm = "primary_response_mapping "+"\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps) 
+                        vm = "primary_response_mapping "+\
+                             "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
                 if vm:
                    temp_list.append(vm)
                    temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
+                   temp_list.append("secondary_response_mapping %s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
                    vm = None
         self.input.model = temp_list
         temp_list = []
@@ -604,7 +601,7 @@ class pydakdriver(DakotaBase):
 
 
     def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None,
-                   response_type=None, gradients=False, hessians=False):
+                   response_type=None, gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
         self.input.responses.append(collections.OrderedDict())
@@ -621,8 +618,15 @@ class pydakdriver(DakotaBase):
         if len(self.input.method) != 1: self.input.model[-1]['model'] = ''
         self.input.model[-1]["id_model"] = "'mod%d'"%len(self.input.model)
         self.input.model[-1][model] = ''
-        if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
-        #self.input.model[-1]['variable_mapping'] = variable_mapping
+        if obj_mult:
+            if len(obj_mult)!=n_objectives:
+                raise ValueError("obj_mult must be same length as n_objectives %d %s"%(n_objectives,
+                             ' '.join(str(s) for s in obj_mult)))
+            else: self.input.obj_mult = obj_mult
+        # TODO: self.input.n_objectives should be an array with one value per method
+        if model == 'nested':
+            self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
+        self.input.n_objectives = n_objectives
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
         self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
