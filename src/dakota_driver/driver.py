@@ -404,9 +404,10 @@ class DakotaBase(Driver):
                             s = vect
                             s[i] = 1
                             maps.append(s)
-                        vm = "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
+                        vm = "primary_response_mapping "+"\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps) 
                 if vm:
                    temp_list.append(vm)
+                   temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
                    vm = None
         self.input.model = temp_list
 
