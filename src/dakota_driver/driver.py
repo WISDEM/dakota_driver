@@ -280,7 +280,7 @@ class DakotaBase(Driver):
             '  initial_point %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
-        if isinstance(val["lower"], collections.Iterable):
+            if isinstance(val["lower"], collections.Iterable):
                 lbounds.extend(val["lower"])
             else:
                 lbounds.append(val["lower"])
@@ -371,7 +371,7 @@ class DakotaBase(Driver):
 
 
     # CONFIGURE VARIABLES, METHOD, MODEL
-    for i in range(len(self.input.responses)):
+        for i in range(len(self.input.responses)):
             if i !=0: self.input.variables.append('\nvariables\n')
             self.input.variables.append("id_variables = 'vars%d'"%(i+1))
             if 'objective_functions' in self.input.responses[i]:
@@ -387,6 +387,10 @@ class DakotaBase(Driver):
         self.methods = temp_list
         self.input.method = temp_list
 
+        conlist = []
+        cons = self.get_constraints()
+        for c in cons:
+            conlist.extend(cons[c])
         temp_list = []
         for i in range(len(self.input.model)):
           for key in self.input.model[i]:
@@ -395,10 +399,12 @@ class DakotaBase(Driver):
                     if not self.input.model[i]['variable_mapping']:
                         vect = [0] *( len(conlist) + 1)
                         maps = []
-                        for i in range(len(en(conlist) + 1)):
+                        for i in range(len(conlist) + 1):
+                            print 'heeeyyy s is ',s
                             s = vect
                             s[i] = 1
                             maps.append(s)
+                        print 'maps: ',[s for s in maps]
                         self.input.model[i]['variable_mapping'] = "\n".join(" ".join([str(a), str(a)] for a in  s) for s in maps)
         self.input.model = temp_list
 
@@ -610,14 +616,14 @@ class pydakdriver(DakotaBase):
         self.input.model[-1]["id_model"] = "'mod%d'"%len(self.input.model)
         if model == 'nested': self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%len(self.input.model)
         self.input.model[-1][model] = ''
-        if variable_mapping: self.input.model[-1]['variable_mapping'] variable_mapping
+        self.input.model[-1]['variable_mapping'] = variable_mapping
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
         self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
 
         # responses
         if not response_type:
-            if method in ['conmin frcg']: response_type='o'
+            if method in ['conmin frcg', 'soga']: response_type='o'
             else: raise TypeError("please specify response_type. %s is not a known method."%method)
         if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
