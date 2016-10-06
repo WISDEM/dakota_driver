@@ -605,7 +605,7 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
-    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None,
+    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, responses_pointer=1, model_pointer=1, variables_pointer=1,
                    response_type=None, gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
@@ -614,8 +614,9 @@ class pydakdriver(DakotaBase):
 
         # method
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
+        if type(model_pointer)=='str': self.input.method[-1]['id_method'] = model_pointer
+        elif model_pointer: self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
         self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
-        self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
         self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
 
@@ -633,8 +634,10 @@ class pydakdriver(DakotaBase):
             self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
         self.input.n_objectives = n_objectives
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
-        self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
-        self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
+        if responses_pointer:
+            self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
+        if variables_pointer:
+            self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
 
         # responses
         if not response_type:
