@@ -276,8 +276,8 @@ class DakotaBase(Driver):
                 initial.append(val)
         self.input.reg_variables.append(
             '  initial_point %s' % ' '.join(str(s) for s in initial))
-        self.input.special_variables.append(
-            '  initial_point %s' % ' '.join(str(s) for s in initial))
+        #self.input.special_variables.append(
+        #    '  initial_point %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
             if isinstance(val["lower"], collections.Iterable):
@@ -605,7 +605,7 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
-    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, responses_pointer=1, model_pointer=1, variables_pointer=1,
+    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None,
                    response_type=None, gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
@@ -614,9 +614,10 @@ class pydakdriver(DakotaBase):
 
         # method
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
-        if type(model_pointer)=='str': self.input.method[-1]['id_method'] = model_pointer
+        if type(model_pointer)=='str': self.input.method[-1]['model_pointer'] = model_pointer
         elif model_pointer: self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
-        self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
+        if method_id: self.input.method[-1]['id_method'] = method_id
+        else: self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
         self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
 
@@ -630,14 +631,17 @@ class pydakdriver(DakotaBase):
                              ' '.join(str(s) for s in obj_mult)))
             else: self.input.obj_mult = obj_mult
         # TODO: self.input.n_objectives should be an array with one value per method
-        if model == 'nested':
-            self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
-        self.input.n_objectives = n_objectives
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         if responses_pointer:
             self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
         if variables_pointer:
             self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
+        if model == 'nested':
+            self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
+        if model == 'surrogate':
+            #del self.input.model[-1]['variables_pointer']
+            if dace_method_pointer: self.input.model[-1]["dace_method_pointer"] = dace_method_pointer
+        self.input.n_objectives = n_objectives
 
         # responses
         if not response_type:
@@ -654,7 +658,7 @@ class pydakdriver(DakotaBase):
         elif gradients == 'analytical':
             self.input.responses[-1]['numerical_gradients'] = ''
             self.input.responses[-1]['method_source dakota'] = ''
-            self.input.responses[-1]['interval_type'] = ''
+            self.input.responses[-1]['interval_type'] = 'central'
             self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
         elif gradients == 'numerical':
             self.input.responses[-1]['numerical_gradients'] = ''
