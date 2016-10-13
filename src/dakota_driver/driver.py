@@ -633,9 +633,11 @@ class pydakdriver(DakotaBase):
         # TODO: self.input.n_objectives should be an array with one value per method
         for opt in model_options: self.input.model[-1][opt] = model_options[opt]
         if responses_pointer:
-            self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
+            if isinstance(responses_pointer,str): self.input.model[-1]['responses_pointer'] = "'%s'"%responses_pointer
+            else: self.input.model[-1]['responses_pointer'] = "'resp%d'"%len(self.input.model)
         if variables_pointer:
-            self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
+            if isinstance(variables_pointer,str): self.input.model[-1]['variables_pointer'] = "'%s'"%variables_pointer
+            else: self.input.model[-1]['variables_pointer'] = "'vars%d'"%len(self.input.model)
         if model == 'nested':
             self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
         if model == 'surrogate':
