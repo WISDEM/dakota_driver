@@ -1,7 +1,7 @@
 from __future__ import print_function
 from dakota_driver.driver import pydakdriver
 from openmdao.api import ScipyOptimizer
-from openmdao.api import IndepVarComp, Component, Problem, Group, ParallelGroup
+from openmdao.api import IndepVarComp, Component, Problem, Group, ParallelGroup, ExecComp
 from openmdao.core.mpi_wrap import MPI
 if MPI: 
     from openmdao.core.petsc_impl import PetscImpl as impl
@@ -52,14 +52,31 @@ root.connect('p2.y', 'p.y')
 
 drives = pydakdriver(name = 'top.driver')
 #drives.Optimization()
-drives.Optimization(opt_type='conmin', ouu=1)
+#drives.Optimization(opt_type='conmin', ouu=1)
+
+# surrogate optimization
+drives.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':''}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
+drives.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':9}, model_pointer=None, variables_pointer = "vars1")
+drives.add_method(method='conmin frcg', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
+
+#drives.add_method(method='conmin frcg', gradients='analytical')
+
+#drives.add_method('soga', method_options = {'max_iterations':3, 'population_size':2}, model='nested')
+#drives.add_method(response_type='r', model='nested', method='sampling', method_options = {'samples':3})
+
+#drives.add_method(response_type='r', model='single', gradients='analytical', method='local_reliability')#, method_options = {'mpp_search':'no_approx',
+
+                   #})
 #drives.UQ()
 top.driver = drives
 #top.driver = ScipyOptimizer()
 #top.driver.options['optimizer'] = 'SLSQP'
 
 top.driver.add_desvar('p2.y', lower=-50, upper=50)
-top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=.02, lower_bounds=-30, upper_bounds=30)
+top.driver.add_desvar('p1.x', lower=-50, upper=50)
+#top.driver.add_special_distribution('p1.x', 'normal', mean=1, std_dev=.02, lower_bounds=-30, upper_bounds=30)
+#top.root.add('new_constraint', ExecComp('new_con = 3.16 - p2.y - p1/10'), promotes=['*'])
+#top.driver.add_constraint('new_con', upper=0.0)
 top.driver.samples = 10
 top.driver.sub_samples = 10
 top.driver.dakota_hotstart = False
@@ -76,4 +93,5 @@ top.run()
 
 print('\n')
 print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
+print('OK')
 
