@@ -24,7 +24,7 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 #from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
 #                                     IHasObjectives, IOptimizer, implements
 #from openmdao.util.decorators import add_delegate
-
+import numpy as np
 __all__ = ['DakotaCONMIN', 'DakotaMultidimStudy', 'DakotaVectorStudy',
            'DakotaGlobalSAStudy', 'DakotaOptimizer', 'DakotaBase']
 
@@ -280,14 +280,16 @@ class DakotaBase(Driver):
         #    '  initial_point %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
-            if isinstance(val["lower"], collections.Iterable):
-                lbounds.extend(val["lower"])
+            if True:
+                lbounds.extend(val["lower"] for _ in range(val['size']))
             else:
                 lbounds.append(val["lower"])
         ubounds = []
         for val in self._desvars.values():
-            if isinstance(val["upper"], collections.Iterable):
-                ubounds.extend(val["upper"])
+            if True:
+            #if type(val["upper"]).__module__ == np.__name__:
+            #if isinstance(val["upper"], collections.Iterable):
+                ubounds.extend(val["upper"]  for _ in range(val['size']))
             else:
                 ubounds.append(val["upper"])
         self.input.reg_variables.extend([
