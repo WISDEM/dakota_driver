@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # set up optimizer
     prob.driver = pydakdriver('dak')
     prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':''}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'")#, variables_pointer = "vars1")
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':9}, model_pointer=None, variables_pointer = "vars1")
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':800}, model_pointer=None, variables_pointer = "vars1")
     prob.driver.add_method(method='conmin frcg', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
     prob.driver.stdout = 'dakota.out'
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     #prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
     for direction_id in range(0, windDirections.size):
         prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
-        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
+        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
 
     # add constraints
     #prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)

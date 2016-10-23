@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     prob = Problem(impl=impl)
 
-    size = 4 # number of processors (and number of wind directions to run)
+    size = 1 # number of processors (and number of wind directions to run)
 
     #########################################################################
     # define turbine size
@@ -87,24 +87,25 @@ if __name__ == "__main__":
     # set up optimizer
     prob.driver = pydakdriver(name='dak')
     prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'','output':'silent'}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
-    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':1000,'output':'silent'}, variables_pointer = "vars1", responses_pointer = "resp1")
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':5000,'output':'silent'})
+    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':200,'output':'silent'}, model_options={'secondary_variable_mapping':''} , variables_pointer = "vars1", responses_pointer = "resp1")
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':500,'output':'silent'})
     prob.driver.add_method(method='conmin frcg', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
     prob.driver.stdout = 'dakota.out'
 
-    prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05,
-                                         lower_bounds=0.5, upper_bounds=2.0)
+    #prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05,
+    #                                     lower_bounds=0.5, upper_bounds=2.0)
 
     prob.driver.add_objective('obj', scaler=1E-5)
 
     # select design variables
-    prob.driver.add_desvar('turbineX', lower=np.ones(nTurbs)*min(turbineX), upper=np.ones(nTurbs)*max(turbineX), scaler=1)
-    prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
-    #for direction_id in range(0, windDirections.size):
-    #    prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
+    #prob.driver.add_desvar('turbineX', lower=np.ones(nTurbs)*min(turbineX), upper=np.ones(nTurbs)*max(turbineX), scaler=1)
+    #prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
+    for direction_id in range(0, windDirections.size):
+        prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
+        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
 
     # add constraints
-    prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
+    #prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
 
     tic = time.time()
     prob.setup(check=False)
@@ -149,6 +150,7 @@ if __name__ == "__main__":
 
     for direction_id in range(0, windDirections.size):
         mpi_print(prob,  'yaw%i (deg) = ' % direction_id, prob['yaw%i' % direction_id])
+    quit()
     # for direction_id in range(0, windDirections.size):
         # mpi_print(prob,  'velocitiesTurbines%i (m/s) = ' % direction_id, prob['velocitiesTurbines%i' % direction_id])
     # for direction_id in range(0, windDirections.size):

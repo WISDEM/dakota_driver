@@ -266,7 +266,12 @@ class DakotaBase(Driver):
                     self.array_desvars.append(param + '[' + str(i) + ']')
 
         self.input.reg_variables.append('continuous_design = %s' % len(parameters))
-        self.input.special_variables.append('continuous_state = %s' % len(parameters))
+
+        secondaryV = False
+        
+        for i in range(len(self.input.model)):
+           if 'secondary_variable_mapping' in self.input.model[i]: secondaryV=True
+        if parameters and not secondaryV: self.input.special_variables.append('continuous_state = %s' % len(parameters))
 
         initial = []  # initial points of regular paramters
         for val in self.get_desvars().values():
@@ -295,14 +300,16 @@ class DakotaBase(Driver):
         self.input.reg_variables.extend([
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
-        self.input.special_variables.extend([
+        if lbounds and not secondaryV: 
+               self.input.special_variables.extend([
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
 
         names = [s[0] for s in parameters]
         self.input.reg_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
-        self.input.special_variables.append(
+        if names and not secondaryV:
+            self.input.special_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
 
         # Add special distributions cases
@@ -406,12 +413,18 @@ class DakotaBase(Driver):
                             s = vect
                             s[j] = 1
                             maps.append(s)
-                        vm = "primary_response_mapping "+\
+                        if "primary_response_mapping" not in self.input.model[i]:
+                            vm = "primary_response_mapping "+\
                              "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
                 if vm:
                    temp_list.append(vm)
-                   temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
-                   if cons: temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
+                   if "primary_variable_mapping" not in self.input.model[i]: temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
+                   if cons: 
+                       if "secondary_response_mapping" not in self.input.model[i]:
+                            temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
+                   if "secondary_variable_mapping" in self.input.model[i] and self.input.model[i]["secondary_variable_mapping"]=="":
+                       if self.input.model[i]["secondary_variable_mapping"]=="":del self.input.model[i]["secondary_variable_mapping"]
+                       temp_list.append("secondary_variable_mapping %s"%" ".join("'mean'" for nam in names))
                    vm = 0
         self.input.model = temp_list
         temp_list = []

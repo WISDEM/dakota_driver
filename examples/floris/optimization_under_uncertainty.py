@@ -88,19 +88,22 @@ if __name__ == "__main__":
     prob.driver = pydakdriver()
     prob.driver.stdout = 'dakota.out'
 
-    prob.driver.add_method('soga', method_options = {'max_iterations':30, 'population_size':20}, model='nested')
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':30})
+    prob.driver.add_method('soga', method_options = {'max_iterations':30, 'population_size':20}, model='nested', model_options={'secondary_variable_mapping':''})
+    #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':3000, 'sample_type':'lhs'})
 
-    prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05, 
-                                         lower_bounds=0.5, upper_bounds=2.0)
+#
+#    prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05, 
+#                                         lower_bounds=0.5, upper_bounds=2.0)
  
     prob.driver.add_objective('obj', scaler=1E-5)
 
     # select design variables
-    prob.driver.add_desvar('turbineX', lower=np.ones(nTurbs)*min(turbineX), upper=np.ones(nTurbs)*max(turbineX), scaler=1)
-    prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
-    #for direction_id in range(0, windDirections.size):
-    #    prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
+    #prob.driver.add_desvar('turbineX', lower=np.ones(nTurbs)*min(turbineX), upper=np.ones(nTurbs)*max(turbineX), scaler=1)
+    #prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
+    for direction_id in range(0, windDirections.size):
+        prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
+        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
 
     # add constraints
     prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
