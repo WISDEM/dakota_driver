@@ -621,7 +621,7 @@ class pydakdriver(DakotaBase):
 
 
     def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None,
-                   response_type=None, gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
+                   response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
         self.input.responses.append(collections.OrderedDict())
@@ -661,10 +661,10 @@ class pydakdriver(DakotaBase):
         self.input.n_objectives = n_objectives
 
         # responses
-        if not response_type:
-            if method in ['conmin frcg', 'soga']: response_type='o'
-            else: raise TypeError("please specify response_type. %s is not a known method."%method)
-        if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
+        #if not response_type:
+        #    if method in ['conmin frcg', 'soga']: response_type='o'
+        #    else: raise TypeError("please specify response_type. %s is not a known method."%method)
+        #if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
         self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
         if response_type=='o':
