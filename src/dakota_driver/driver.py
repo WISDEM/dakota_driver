@@ -416,6 +416,7 @@ class DakotaBase(Driver):
                         if "primary_response_mapping" not in self.input.model[i]:
                             vm = "primary_response_mapping "+\
                              "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
+                        else: vm = " primary_response_mapping %s"%self.input.model[i]["primary_response_mapping"]
                 if vm:
                    temp_list.append(vm)
                    if "primary_variable_mapping" not in self.input.model[i]: temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
@@ -620,7 +621,7 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
-    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None,
+    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None, response_options = {}, 
                    response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
@@ -669,8 +670,9 @@ class pydakdriver(DakotaBase):
         self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
         if response_type=='o':
             self.input.responses[-1]["objective_functions"] = 1 if not uq_responses else uq_responses
-        else:
+        elif response_type=='r':
             self.input.responses[-1]["response_functions"] = self.input.n_objectives 
+        for r in response_options: self.input.responses[-1][r] = response_options[r]
         if not gradients: self.input.responses[-1]["no_gradients"] = ''
         elif gradients == 'analytical':
             self.input.responses[-1]['numerical_gradients'] = ''

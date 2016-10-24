@@ -60,7 +60,7 @@ if __name__ == "__main__":
     Ct = np.zeros(nTurbs)
     Cp = np.zeros(nTurbs)
     generatorEfficiency = np.zeros(nTurbs)
-    yaw = np.zeros(nTurbs)
+    yaw = np.array([2.0654456100e-03, 2.0415982407e-03, -1.8869797574e-03, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.4788045980e+01, 2.4788630478e+01, 2.4788389629e+01])
     minSpacing = 2.                         # number of rotor diameters
 
     # define initial values
@@ -85,18 +85,18 @@ if __name__ == "__main__":
                                           minSpacing=minSpacing, differentiable=True, use_rotor_components=False))
 
     # set up optimizer
-    prob.driver = pydakdriver(name='dak')
-    #prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'','output':'silent'}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
-    #prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':200,'output':'silent'}, model_options={'secondary_variable_mapping':''} , variables_pointer = "vars1", responses_pointer = "resp1")
-    #prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':100,'output':'silent'})
-    #prob.driver.add_method(method='coliny_cobyla', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
-
-    prob.driver.add_method(method='coliny_cobyla', gradients='analytical')
+    prob.driver = pydakdriver()
     prob.driver.stdout = 'dakota.out'
 
-    #prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05,
-    #                                     lower_bounds=0.5, upper_bounds=2.0)
+    prob.driver.add_method('coliny_cobyla', gradients='analytical')
+    #prob.driver.add_method('moga', method_options = {'max_iterations':10, 'population_size':20}, model='nested', model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0 \n 0 1'}, response_type=33, response_options={'objective_functions':2})
+    #prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':3000, 'sample_type':'lhs'})
+    #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
 
+#
+#    prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05, 
+#                                         lower_bounds=0.5, upper_bounds=2.0)
+ 
     prob.driver.add_objective('obj', scaler=1E-5)
 
     # select design variables
@@ -152,7 +152,6 @@ if __name__ == "__main__":
 
     for direction_id in range(0, windDirections.size):
         mpi_print(prob,  'yaw%i (deg) = ' % direction_id, prob['yaw%i' % direction_id])
-    quit()
     # for direction_id in range(0, windDirections.size):
         # mpi_print(prob,  'velocitiesTurbines%i (m/s) = ' % direction_id, prob['velocitiesTurbines%i' % direction_id])
     # for direction_id in range(0, windDirections.size):

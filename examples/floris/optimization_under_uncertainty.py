@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     prob = Problem(impl=impl)
 
-    size = 4 # number of processors (and number of wind directions to run)
+    size = 1 # number of processors (and number of wind directions to run)
 
     #########################################################################
     # define turbine size
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     Ct = np.zeros(nTurbs)
     Cp = np.zeros(nTurbs)
     generatorEfficiency = np.zeros(nTurbs)
-    yaw = np.zeros(nTurbs)
+    yaw = np.array([2.0654456100e-03, 2.0415982407e-03, -1.8869797574e-03, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.4788045980e+01, 2.4788630478e+01, 2.4788389629e+01])
     minSpacing = 2.                         # number of rotor diameters
 
     # define initial values
@@ -88,9 +88,10 @@ if __name__ == "__main__":
     prob.driver = pydakdriver()
     prob.driver.stdout = 'dakota.out'
 
-    prob.driver.add_method('soga', method_options = {'max_iterations':30, 'population_size':20}, model='nested', model_options={'secondary_variable_mapping':''})
-    #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
+    #prob.driver.add_method('coliny_cobyla', gradients='analytical')
+    prob.driver.add_method('moga', method_options = {'max_iterations':10, 'population_size':20}, model='nested', model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0 \n 0 1'}, response_type=33, response_options={'objective_functions':2})
     prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':3000, 'sample_type':'lhs'})
+    prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
 
 #
 #    prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05, 
@@ -106,7 +107,7 @@ if __name__ == "__main__":
         for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
 
     # add constraints
-    prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
+    #prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
 
     tic = time.time()
     prob.setup(check=False)
