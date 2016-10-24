@@ -59,8 +59,8 @@ if __name__ == "__main__":
     axialInduction = np.zeros(nTurbs)
     Ct = np.zeros(nTurbs)
     Cp = np.zeros(nTurbs)
+    yaw = np.zeros(nTurbs)
     generatorEfficiency = np.zeros(nTurbs)
-    yaw = np.array([2.0654456100e-03, 2.0415982407e-03, -1.8869797574e-03, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.4788045980e+01, 2.4788630478e+01, 2.4788389629e+01])
     minSpacing = 2.                         # number of rotor diameters
 
     # define initial values
