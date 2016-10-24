@@ -87,10 +87,10 @@ if __name__ == "__main__":
     # set up optimizer
     prob.driver = pydakdriver(name='dak')
     #prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'','output':'silent'}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
-    prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'', 'initial_size':1, 'minimum_size':1e-6, 'contract_threshold':.25, 'expand_threshold':.75, 'contraction_factor':.5, 'expansion_factor':1.5}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
+    prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'', 'initial_size':.1, 'minimum_size':1e-6, 'contract_threshold':.25, 'expand_threshold':.75, 'contraction_factor':.5, 'expansion_factor':1.5}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
 
-    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':200,'output':'silent'}, model_options={'secondary_variable_mapping':''} , variables_pointer = "vars1", responses_pointer = "resp1")
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':100,'output':'silent'})
+    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':200,'output':'silent'}, model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0'} , variables_pointer = "vars1", responses_pointer = "resp1")
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':500,'output':'silent'})
     prob.driver.add_method(method='coliny_cobyla', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
 
     #prob.driver.add_method(method='coliny_cobyla', gradients='analytical')
