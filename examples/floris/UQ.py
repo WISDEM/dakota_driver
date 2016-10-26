@@ -61,7 +61,14 @@ if __name__ == "__main__":
     Cp = np.zeros(nTurbs)
     generatorEfficiency = np.zeros(nTurbs)
     #yaw = np.zeros(nTurbs)
-    yaw = np.array([2.0654456100e-03, 2.0415982407e-03, -1.8869797574e-03, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.4788045980e+01, 2.4788630478e+01, 2.4788389629e+01])
+
+    # det
+    # mean 1.9268056895e+03 std 5.8257439465e+01
+    # yaw = np.array([8.4530186263e-03, -1.4746827230e-01 , 6.7982357864e-02 , 3.6525104827e-02, -1.1895839185e-01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.9999191143e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.5308788717e+01, 2.5298594368e+01, 2.5344261181e+01, 2.5352273218e+01, 2.5263228254e+01])
+
+   # ouu
+ # mean 1.9315349607e+03 std 5.6775085212e+01
+    yaw = np.array([3.7584530186e+00, -1.5859781860e+00, -5.1820176421e+00, -9.7088460595e+0, -3.2937948852e+00, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01])
     minSpacing = 2.                         # number of rotor diameters
 
     # define initial values
@@ -71,7 +78,7 @@ if __name__ == "__main__":
         Ct[turbI] = 4.0*axialInduction[turbI]*(1.0-axialInduction[turbI])
         Cp[turbI] = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
         generatorEfficiency[turbI] = 0.944
-        #yaw[turbI] = 0.     # deg.
+        #yaw[turbI] = yaw[turbI]     # deg.
         ratedPower[turbI] = 5000.0  # rated power of each turbine in kW
 
     # Define flow properties
@@ -89,8 +96,9 @@ if __name__ == "__main__":
     prob.driver = pydakdriver()
     prob.driver.stdout = 'dakota.out'
 
-    #prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':1000, 'sample_type':'lhs'})
-    prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':1000, 'sample_type':'lhs'})
+    #prob.driver.add_method(response_type='r', model='single', method='stoch_collocation', method_options = {'sparse_grid_level_sequence':1})
+    #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
 
     #prob.driver.add_special_distribution('air_density', 'normal', mean=air_density, std_dev=air_density*.05, 
     #                                     lower_bounds=0.5, upper_bounds=2.0)
@@ -103,7 +111,7 @@ if __name__ == "__main__":
     for direction_id in range(0, windDirections.size):
         #prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
         #for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30., mean=yaw[n], std_dev=1e-11)
-        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
+        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.1, upper_bounds=30.1, mean=yaw[n], std_dev=1e-11)#30)
 
     # add constraints
     #prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)
@@ -119,8 +127,8 @@ if __name__ == "__main__":
     # assign initial values to design variables
     prob['turbineX'] = turbineX
     prob['turbineY'] = turbineY
-    for direction_id in range(0, windDirections.size):
-        prob['yaw%i' % direction_id] = yaw[direction_id]
+    for i in range(len(yaw)):
+        prob['yaw0'] [ i] = yaw[i]
 
     # assign values to constant inputs (not design variables)
     prob['rotorDiameter'] = rotorDiameter

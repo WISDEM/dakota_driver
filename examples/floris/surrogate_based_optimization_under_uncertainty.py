@@ -61,6 +61,7 @@ if __name__ == "__main__":
     Cp = np.zeros(nTurbs)
     generatorEfficiency = np.zeros(nTurbs)
     yaw = np.zeros(nTurbs)
+    yaw = np.array([8.4530186263e-03, -1.4746827230e-01 , 6.7982357864e-02 , 3.6525104827e-02, -1.1895839185e-01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.9999191143e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 3.0000000000e+01, 2.5308788717e+01, 2.5298594368e+01, 2.5344261181e+01, 2.5352273218e+01, 2.5263228254e+01])
     minSpacing = 2.                         # number of rotor diameters
 
     # define initial values
@@ -70,7 +71,6 @@ if __name__ == "__main__":
         Ct[turbI] = 4.0*axialInduction[turbI]*(1.0-axialInduction[turbI])
         Cp[turbI] = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
         generatorEfficiency[turbI] = 0.944
-        yaw[turbI] = 0.     # deg.
         ratedPower[turbI] = 5000.0  # rated power of each turbine in kW
 
     # Define flow properties
@@ -89,9 +89,10 @@ if __name__ == "__main__":
     #prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'','output':'silent'}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
     prob.driver.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':'', 'initial_size':.1, 'minimum_size':1e-6, 'contract_threshold':.25, 'expand_threshold':.75, 'contraction_factor':.5, 'expansion_factor':1.5}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
 
-    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':200,'output':'silent'}, model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0'} , variables_pointer = "vars1", responses_pointer = "resp1")
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':500,'output':'silent'})
-    prob.driver.add_method(method='coliny_cobyla', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
+    prob.driver.add_method(response_type='r', model='nested', method='sampling', method_options = {'sample_type':'lhs','samples':500,'output':'silent'}, model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0'} , variables_pointer = "vars1", responses_pointer = "resp1")
+    #prob.driver.add_method(response_type='r', model='single', method='stoch_collocation', method_options = {'sparse_grid_level_sequence':1})
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':2000,'output':'silent'})
+    prob.driver.add_method(method='coliny_cobyla', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1",n_objectives=1)
 
     #prob.driver.add_method(method='coliny_cobyla', gradients='analytical')
     prob.driver.stdout = 'dakota.out'
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     #prob.driver.add_desvar('turbineY', lower=np.ones(nTurbs)*min(turbineY), upper=np.ones(nTurbs)*max(turbineY), scaler=1)
     for direction_id in range(0, windDirections.size):
         prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
-        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=0, std_dev=30)
+        for n in range(nTurbs): prob.driver.add_special_distribution('yaw%i[%i]' % (direction_id,n), 'normal', lower_bounds=-30.0, upper_bounds=30.0, mean=yaw[n], std_dev=30)
 
     # add constraints
     #prob.driver.add_constraint('sc', lower=np.zeros(((nTurbs-1.)*nTurbs/2.)), scaler=1.0)

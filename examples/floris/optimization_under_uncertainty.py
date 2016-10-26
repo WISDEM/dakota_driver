@@ -90,7 +90,8 @@ if __name__ == "__main__":
 
     #prob.driver.add_method('coliny_cobyla', gradients='analytical')
     prob.driver.add_method('moga', method_options = {'max_iterations':10, 'population_size':20}, model='nested', model_options={'secondary_variable_mapping':'', 'primary_response_mapping':'1 0 \n 0 1'}, response_type=33, response_options={'objective_functions':2})
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':3000, 'sample_type':'lhs'})
+    prob.driver.add_method(response_type='r', model='single', method='stoch_collocation', method_options = {'sparse_grid_level_sequence':1})
+    #prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':3000, 'sample_type':'lhs'})
     #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
 
 #
