@@ -416,7 +416,7 @@ class DakotaBase(Driver):
                         if "primary_response_mapping" not in self.input.model[i]:
                             vm = "primary_response_mapping "+\
                              "\n".join(" ".join(" ".join([str(a), str(a)]) for a in  s) for s in maps)
-                        else: vm = " primary_response_mapping %s"%self.input.model[i]["primary_response_mapping"]
+                        else: vm = " "
                 if vm:
                    temp_list.append(vm)
                    if "primary_variable_mapping" not in self.input.model[i]: temp_list.append("primary_variable_mapping %s"%" ".join("'" + str(nam) + "'" for nam in names))
