@@ -180,11 +180,12 @@ class DakotaBase(Driver):
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
-        # support list OR numbers as desvars
-        if self.ouu: dvlist = self.special_distribution_variables
-        else: dvlist = []
-        if self.array_desvars:
+        dvlist = self.special_distribution_variables
+        if True: #self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
+                #print("yoooo ",self._desvars.keys() )
+                #print("yoooo ",  self.array_desvars) ; quit()
+                #print("setting ",var, "as ",cv[i])
                 if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
                 elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
                     self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
@@ -295,8 +296,8 @@ class DakotaBase(Driver):
                 initial.append(val)
         self.input.reg_variables.append(
             '  initial_point %s' % ' '.join(str(s) for s in initial))
-        #self.input.special_variables.append(
-        #    '  initial_point %s' % ' '.join(str(s) for s in initial))
+        if initial: self.input.special_variables.append(
+            '  initial_state %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
             if not isinstance(val["lower"], collections.Iterable):
