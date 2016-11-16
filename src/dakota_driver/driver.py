@@ -8,6 +8,7 @@ DAKOTA results.
 """
 from openmdao.util.record_util import create_local_meta
 from numpy import array
+import re
 from mpi4py.MPI import COMM_WORLD as world
 import collections
 
@@ -124,7 +125,10 @@ class DakotaBase(Driver):
         self.input.write_input(infile, data=self)
         from openmdao.core.mpi_wrap import MPI
         if MPI:
-            run_dakota(infile, use_mpi=True, stdout=self.stdout, stderr=self.stderr, restart=self.dakota_hotstart)
+            if self.mpi_comm:
+               run_dakota(infile, use_mpi=True, mpi_comm = self.mpi_comm, stdout=self.stdout, stderr=self.stderr, restart=self.dakota_hotstart)
+            else:
+               run_dakota(infile, use_mpi=True, stdout=self.stdout, stderr=self.stderr, restart=self.dakota_hotstart)
         else:
             run_dakota(infile, stdout=self.stdout, stderr=self.stderr, restart= self.dakota_hotstart)
         #try:
@@ -176,16 +180,23 @@ class DakotaBase(Driver):
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
-        # support list OR numbers as desvars
-        if self.ouu: dvlist = self.special_distribution_variables
-        else: dvlist = []
-        if self.array_desvars:
+        dvlist = self.special_distribution_variables
+        if True: #self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
-                self.set_desvar(var, cv[i])
+                #print("yoooo ",self._desvars.keys() )
+                #print("yoooo ",  self.array_desvars) ; quit()
+                #print("setting ",var, "as ",cv[i])
+                if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
+                elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
+                    self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
         else:
-            dvl = dvlist + self._desvars.keys()
+            dvl = dvlist + self._desvars.keys() +  self.special_distribution_variables
+            #dvl = dvlist + self._desvars.keys() 
             for i  in range(len(cv)):
-                self.set_desvar(dvl[i], cv[i])
+                if dvl[i] in self.root.unknowns._dat.keys(): self.set_desvar(dvl[i], cv[i])
+                #self.set_desvar(dvl[i], cv[i])
+                elif re.findall("(.*)\[(.*)\]", dvl[i])[0][0] in self.root.unknowns._dat.keys(): 
+                    self.set_desvar(re.findall("(.*)\[(.*)\]", dvl[i])[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", dvl[i])[0][1])])
         system = self.root
         metadata = self.metadata  = create_local_meta(None, 'pydakrun%d'%world.Get_rank())
         system.ln_solver.local_meta = metadata
@@ -271,7 +282,11 @@ class DakotaBase(Driver):
         
         for i in range(len(self.input.model)):
            if 'secondary_variable_mapping' in self.input.model[i]: secondaryV=True
-        if parameters and not secondaryV: self.input.special_variables.append('continuous_state = %s' % len(parameters))
+        if parameters: 
+            state_params = []
+            for param in parameters:
+                if param not in self.special_distribution_variables: state_params.append(param)
+            if state_params: self.input.special_variables.append('continuous_state = %s' % len(state_params))
 
         initial = []  # initial points of regular paramters
         for val in self.get_desvars().values():
@@ -281,26 +296,26 @@ class DakotaBase(Driver):
                 initial.append(val)
         self.input.reg_variables.append(
             '  initial_point %s' % ' '.join(str(s) for s in initial))
-        #self.input.special_variables.append(
-        #    '  initial_point %s' % ' '.join(str(s) for s in initial))
+        if initial: self.input.special_variables.append(
+            '  initial_state %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
-            if True:
+            if not isinstance(val["lower"], collections.Iterable):
                 lbounds.extend(val["lower"] for _ in range(val['size']))
             else:
-                lbounds.append(val["lower"])
+                lbounds.extend(val["lower"])
         ubounds = []
         for val in self._desvars.values():
-            if True:
+            if not isinstance(val["upper"], collections.Iterable):
             #if type(val["upper"]).__module__ == np.__name__:
             #if isinstance(val["upper"], collections.Iterable):
                 ubounds.extend(val["upper"]  for _ in range(val['size']))
             else:
-                ubounds.append(val["upper"])
+                ubounds.extend(val["upper"])
         self.input.reg_variables.extend([
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
-        if lbounds and not secondaryV: 
+        if lbounds and state_params:
                self.input.special_variables.extend([
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
@@ -308,14 +323,17 @@ class DakotaBase(Driver):
         names = [s[0] for s in parameters]
         self.input.reg_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
-        if names and not secondaryV:
+        if names and state_params:
             self.input.special_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
 
         # Add special distributions cases
         for var in self.special_distribution_variables:
             if var in parameters: self.remove_parameter(var)
-            self.add_desvar(var)
+            if ']' in var:
+               if int(re.findall("(.*)\[(.*)\]", var)[0][1])==0 and re.findall("(.*)\[(.*)\]", var)[0][0] not in self._desvars.keys():
+                   self.add_desvar(re.findall("(.*)\[(.*)\]", var)[0][0])
+            else: self.add_desvar(var)
         if self.normal_descriptors:
             # print(self.normal_means) ; quit()
             self.input.special_variables.extend([
@@ -424,8 +442,8 @@ class DakotaBase(Driver):
                        if "secondary_response_mapping" not in self.input.model[i]:
                             temp_list.append("secondary_response_mapping \n%s" % " \n".join( " ".join( " ".join([str(s), str(s)]) for s in secondary_responses[i]) for i in range(len(cons))))
                    if "secondary_variable_mapping" in self.input.model[i] and self.input.model[i]["secondary_variable_mapping"]=="":
-                       if self.input.model[i]["secondary_variable_mapping"]=="":del self.input.model[i]["secondary_variable_mapping"]
-                       temp_list.append("secondary_variable_mapping %s"%" ".join("'mean'" for nam in names))
+                       del self.input.model[i]["secondary_variable_mapping"]
+                       temp_list.append("secondary_variable_mapping %s"%" ".join("'mean'" if nam in self.special_distribution_variables else "''" for nam in names))
                    vm = 0
         self.input.model = temp_list
         temp_list = []
@@ -572,10 +590,11 @@ class DakotaBase(Driver):
 class pydakdriver(DakotaBase):
     #implements(IOptimizer) # Not sure what this does
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, comm=None):
         super(pydakdriver, self).__init__()
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
+        if comm: self.mpi_comm = comm
         self.input.special_variables = []
         self.methods = []
         self.input.model = []
