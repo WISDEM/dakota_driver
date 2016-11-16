@@ -651,7 +651,7 @@ class pydakdriver(DakotaBase):
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
         if type(model_pointer)=='str': self.input.method[-1]['model_pointer'] = "'%s'"%model_pointer
         elif model_pointer: self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
-        if method_id: self.input.method[-1]['id_method'] = method_id
+        if method_id: self.input.method[-1]['id_method'] = "'%s'"%method_id
         else: self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
         self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
