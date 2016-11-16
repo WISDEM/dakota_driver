@@ -649,9 +649,9 @@ class pydakdriver(DakotaBase):
 
         # method
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
-        if type(model_pointer)=='str': self.input.method[-1]['model_pointer'] = model_pointer
+        if type(model_pointer)=='str': self.input.method[-1]['model_pointer'] = "'%s'"%model_pointer
         elif model_pointer: self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
-        if method_id: self.input.method[-1]['id_method'] = method_id
+        if method_id: self.input.method[-1]['id_method'] = "'%s'"%method_id
         else: self.input.method[-1]['id_method'] = "'meth%d'"%len( self.input.method)
         self.input.method[-1][method] = ''
         for opt in method_options: self.input.method[-1][opt] = method_options[opt]
@@ -677,7 +677,7 @@ class pydakdriver(DakotaBase):
             self.input.model[-1]["sub_method_pointer"] = "'meth%d'"%(len(self.input.model)+1)
         if model == 'surrogate':
             #del self.input.model[-1]['variables_pointer']
-            if dace_method_pointer: self.input.model[-1]["dace_method_pointer"] = dace_method_pointer
+            if dace_method_pointer: self.input.model[-1]["dace_method_pointer"] = "'%s'"%dace_method_pointer
         self.input.n_objectives = n_objectives
 
         # responses
