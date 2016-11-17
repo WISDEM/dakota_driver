@@ -379,15 +379,27 @@ class DakotaBase(Driver):
             ])
 
 
-    # CONFIGURE VARIABLES, METHOD, MODEL
+        # CONFIGURE VARIABLES, METHOD, MODEL
         for i in range(len(self.input.responses)):
             if i !=0: self.input.variables.append('\nvariables\n')
             self.input.variables.append("id_variables = 'vars%d'"%(i+1))
-            if 'objective_functions' in self.input.responses[i]:
-                self.input.variables.append("\n".join(self.input.reg_variables))
-            elif 'response_functions' in self.input.responses[i]:
-                self.input.variables.append("\n".join(self.input.uncertain_variables + self.input.state_variables))
-            else: raise ValueError("could not find response or objective in repsonse block %d %s")%(i, '\n'.join(self.input.responses[i]))
+            if 'var_types' not in self.input.responses[i]:
+               if 'objective_functions' in self.input.responses[i]:
+                   self.input.variables.append("\n".join(self.input.reg_variables))
+               elif 'response_functions' in self.input.responses[i]:
+                   self.input.variables.append("\n".join(self.input.uncertain_variables + self.input.state_variables))
+               else: raise ValueError("could not find response or objective in repsonse block %d %s")%(i, '\n'.join(self.input.responses[i]))
+            else:
+               for vartype in self.input.responses[i]['var_types']:
+                   if vartype=='uncertain':
+                     self.input.variables.append("\n".join(self.input.uncertain_variables))
+                   elif vartype=='design':
+                     self.input.variables.append("\n".join(self.input.reg_variables))
+                   elif vartype=='state':
+                     self.input.variables.append("\n".join(self.input.state_variables))
+                   else: raise ValueError("%s variable type is not supported"%vartype)
+               self.input.responses[i].remove('var_types')
+                       
         objectives = self.get_objectives()
         temp_list = []
         for i in range(len(self.input.method)):
@@ -472,6 +484,9 @@ class DakotaBase(Driver):
           try: self.remove_parameter(var)
           except AttributeError:
              pass
+       self.special_distribution_variables = []
+
+       self.normal_means = []
        self.special_distribution_variables = []
 
        self.normal_means = []
@@ -565,11 +580,6 @@ class DakotaBase(Driver):
             self.gamma_betas.append(str(beta))
             self.gamma_descriptors.append(var)
 
-        elif dist == "weibull":
-            check_set(beta)
-            check_set(alpha)
-
-            self.weibull_alphas.append(str(alpha))
             self.weibull_betas.append(str(beta))
             self.weibull_descriptors.append(var)
        
@@ -710,6 +720,7 @@ class pydakdriver(DakotaBase):
             self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
         else: raise ValueError("Gradients %s not set as analytical or numerical"%gradients)
         if not hessians:  self.input.responses[-1]["no_hessians"] = ''
+        if variable_types: self.input.responses[-1]['var_types'] = var_types # we will translate this to the variables section in configure_input
     def analytical_gradients(self):
          self.interval_type = 'forward'
          for key in self.input.responses:
@@ -777,6 +788,12 @@ class pydakdriver(DakotaBase):
             self.input.method["efficient_global"] = ""
             self.input.method["seed"] = _SET_AT_RUNTIME
             self.numerical_gradients()
+            self.input.method["max_function_evaluations"] = self.max_function_evaluations
+            self.input.method["replacement_type"] = "unique_roulette_wheel"
+        if opt_type == 'efficient_global':
+            self.input.method["efficient_global"] = ""
+            self.input.method["seed"] = _SET_AT_RUNTIME
+            self.numerical_gradients()
         if opt_type == 'conmin':
             self.need_start=True           
 
@@ -826,13 +843,7 @@ class pydakdriver(DakotaBase):
             self.input.method['list_of_points'] = _SET_AT_RUNTIME 
             self.input.responses['response_functions']=_SET_AT_RUNTIME
         else: self.input.responses['objective_functions']=_SET_AT_RUNTIME 
-        if study_type == 'centered':
-            self.input.method['centered_parameter_study'] = ""
-            self.input.method['step_vector'] = _SET_AT_RUNTIME
-            self.input.method['steps_per_variable'] = _SET_AT_RUNTIME
-        self.input.responses['no_gradients']=''
-        self.input.responses['no_hessians']=''
-
+        #if study_type == 'centered':
     def UQ(self,UQ_type = 'sampling', use_seed=False):
             self.sample_type =  'random' #'lhs'
             #self.seed = _SET_AT_RUNTIME
