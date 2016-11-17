@@ -180,12 +180,9 @@ class DakotaBase(Driver):
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
-        dvlist = self.special_distribution_variables
+        dvlist = [s for s in self.special_distribution_variables if s not in self.array_desvars]
         if True: #self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
-                #print("yoooo ",self._desvars.keys() )
-                #print("yoooo ",  self.array_desvars) ; quit()
-                #print("setting ",var, "as ",cv[i])
                 if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
                 elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
                     self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
