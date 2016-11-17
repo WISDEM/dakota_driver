@@ -708,17 +708,14 @@ class pydakdriver(DakotaBase):
             self.input.responses[-1]["response_functions"] = self.input.n_objectives 
         for r in response_options: self.input.responses[-1][r] = response_options[r]
         if not gradients: self.input.responses[-1]["no_gradients"] = ''
-        elif gradients == 'analytical':
-            self.input.responses[-1]['numerical_gradients'] = ''
-            self.input.responses[-1]['method_source dakota'] = ''
-            self.input.responses[-1]['interval_type'] = 'central'
-            self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
+        elif gradients == 'analytic':
+            self.input.responses[-1]['analytic_gradients'] = ''
         elif gradients == 'numerical':
             self.input.responses[-1]['numerical_gradients'] = ''
             self.input.responses[-1]['method_source dakota'] = ''
             self.input.responses[-1]['interval_type'] = ''
             self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
-        else: raise ValueError("Gradients %s not set as analytical or numerical"%gradients)
+        else: raise ValueError("Gradient specification '%s' is not 'analytic' or 'numerical'"%gradients)
         if not hessians:  self.input.responses[-1]["no_hessians"] = ''
         if variable_types: self.input.responses[-1]['var_types'] = variable_types # we will translate this to the variables section in configure_input
     def analytical_gradients(self):
