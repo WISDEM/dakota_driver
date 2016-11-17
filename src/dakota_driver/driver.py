@@ -398,7 +398,7 @@ class DakotaBase(Driver):
                    elif vartype=='state':
                      self.input.variables.append("\n".join(self.input.state_variables))
                    else: raise ValueError("%s variable type is not supported"%vartype)
-               self.input.responses[i].remove('var_types')
+               del self.input.responses[i]['var_types']
                        
         objectives = self.get_objectives()
         temp_list = []
@@ -720,7 +720,7 @@ class pydakdriver(DakotaBase):
             self.input.responses[-1]['fd_gradient_step_size'] = self.fd_gradient_step_size
         else: raise ValueError("Gradients %s not set as analytical or numerical"%gradients)
         if not hessians:  self.input.responses[-1]["no_hessians"] = ''
-        if variable_types: self.input.responses[-1]['var_types'] = var_types # we will translate this to the variables section in configure_input
+        if variable_types: self.input.responses[-1]['var_types'] = variable_types # we will translate this to the variables section in configure_input
     def analytical_gradients(self):
          self.interval_type = 'forward'
          for key in self.input.responses:
