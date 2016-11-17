@@ -638,12 +638,23 @@ class pydakdriver(DakotaBase):
     #      or _SET_AT_RUNTIME. the value is effectively hardwired.
 
 
+    # REASONING BEHIND ADD_METHOD
+    # The conception is that each method is associated with model, responses, and variables specifications. The user can specify to associate the method with different variable/response/model blocks, but the # response blocks = # method blocks = # responses blocks = # method blocks, even if some go unused. This allows for the interface to be intuitive and flexible.
+    # In the event that a desired input file can't be made, we suggest writing your own configure_input method, or even just calling the run_dakota method directly.
+    #
+    # Assumptions
+    # -------------
+    #1. variable types must be specified, but variable blocks of specific types will always be the same (e.g., we can't have two uncertain variables blocks with different specifications)
+    #
+    # Tips
+    # -----
+    # specifying secondary_variable_mapping as '' in model_options defgaults to mapping continous_design to associated uncertain or state variables
+
     def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None, response_options = {}, 
-                   response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None):
+                   response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None, variable_types=[]):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
         self.input.responses.append(collections.OrderedDict())
-        #self.input.variables.append(collections.OrderedDict())
 
         # method
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
@@ -679,10 +690,6 @@ class pydakdriver(DakotaBase):
         self.input.n_objectives = n_objectives
 
         # responses
-        #if not response_type:
-        #    if method in ['conmin frcg', 'soga']: response_type='o'
-        #    else: raise TypeError("please specify response_type. %s is not a known method."%method)
-        #if response_type not in ['o', 'r']: raise ValueError("response type %s not in 'o' 'r'"%response_type)
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
         self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
         if response_type=='o':
