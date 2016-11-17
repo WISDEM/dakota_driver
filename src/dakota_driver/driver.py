@@ -283,7 +283,7 @@ class DakotaBase(Driver):
             state_params = []
             for param in parameters:
                 if param not in self.special_distribution_variables: state_params.append(param)
-            if state_params: self.input.special_variables.append('continuous_state = %s' % len(state_params))
+            if state_params: self.input.state_variables.append('continuous_state = %s' % len(state_params))
 
         initial = []  # initial points of regular paramters
         for val in self.get_desvars().values():
@@ -293,7 +293,7 @@ class DakotaBase(Driver):
                 initial.append(val)
         self.input.reg_variables.append(
             '  initial_point %s' % ' '.join(str(s) for s in initial))
-        if initial: self.input.special_variables.append(
+        if initial: self.input.state_variables.append(
             '  initial_state %s' % ' '.join(str(s) for s in initial))
         lbounds = []
         for val in self._desvars.values():
@@ -313,7 +313,7 @@ class DakotaBase(Driver):
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
         if lbounds and state_params:
-               self.input.special_variables.extend([
+               self.input.state_variables.extend([
             '  lower_bounds %s' % ' '.join(str(bnd) for bnd in lbounds),
             '  upper_bounds %s' % ' '.join(str(bnd) for bnd in ubounds)])
 
@@ -321,7 +321,7 @@ class DakotaBase(Driver):
         self.input.reg_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
         if names and state_params:
-            self.input.special_variables.append(
+            self.input.state_variables.append(
             '  descriptors  %s' % ' '.join("'" + str(nam) + "'" for nam in names))
 
         # Add special distributions cases
@@ -333,7 +333,7 @@ class DakotaBase(Driver):
             else: self.add_desvar(var)
         if self.normal_descriptors:
             # print(self.normal_means) ; quit()
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'normal_uncertain =  %s' % len(self.normal_means),
                 '  means  %s' % ' '.join(self.normal_means),
                 '  std_deviations  %s' % ' '.join(self.normal_std_devs),
@@ -342,20 +342,20 @@ class DakotaBase(Driver):
                 '  upper_bounds = %s' % ' '.join(self.normal_upper_bounds)
             ])
         if self.lognormal_descriptors:
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'lognormal_uncertain = %s' % len(self.lognormal_means),
                 '  means  %s' % ' '.join(self.lognormal_means),
                 '  std_deviations  %s' % ' '.join(self.lognormal_std_devs),
                 "  descriptors  '%s'" % "' '".join(self.lognormal_descriptors)
             ])
         if self.exponential_descriptors:
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'exponential_uncertain = %s' % len(self.exponential_descriptors),
                 '  betas  %s' % ' '.join(self.exponential_betas),
                 "  descriptors ' %s'" % "' '".join(self.exponential_descriptors)
             ])
         if self.beta_descriptors:
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'beta_uncertain = %s' % len(self.beta_descriptors),
                 '  betas = %s' % ' '.join(self.beta_betas),
                 '  alphas = %s' % ' '.join(self.beta_alphas),
@@ -364,14 +364,14 @@ class DakotaBase(Driver):
                 '  upper_bounds = %s' % ' '.join(self.beta_upper_bounds)
             ])
         if self.gamma_descriptors:
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'beta_uncertain = %s' % len(self.gamma_descriptors),
                 '  betas = %s' % ' '.join(self.gamma_betas),
                 '  alphas = %s' % ' '.join(self.gamma_alphas),
                 "  descriptors = '%s'" % "' '".join(self.gamma_descriptors)
             ])
         if self.weibull_descriptors:
-            self.input.special_variables.extend([
+            self.input.uncertain_variables.extend([
                 'weibull_uncertain = %s' % len(self.weibull_descriptors),
                 '  betas  %s' % ' '.join(self.weibull_betas),
                 '  alphas  %s' % ' '.join(self.weibull_alphas),
@@ -386,7 +386,7 @@ class DakotaBase(Driver):
             if 'objective_functions' in self.input.responses[i]:
                 self.input.variables.append("\n".join(self.input.reg_variables))
             elif 'response_functions' in self.input.responses[i]:
-                self.input.variables.append("\n".join(self.input.special_variables))
+                self.input.variables.append("\n".join(self.input.uncertain_variables + self.input.state_variables))
             else: raise ValueError("could not find response or objective in repsonse block %d %s")%(i, '\n'.join(self.input.responses[i]))
         objectives = self.get_objectives()
         temp_list = []
@@ -592,7 +592,8 @@ class pydakdriver(DakotaBase):
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
         if comm: self.mpi_comm = comm
-        self.input.special_variables = []
+        self.input.uncertain_variables = []
+        self.input.state_variables = []
         self.methods = []
         self.input.model = []
         self.input.reg_variables = []
