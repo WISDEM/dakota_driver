@@ -98,19 +98,6 @@ class DakotaBase(Driver):
         if not self.input.responses:
             self.raise_exception('Responses not set', ValueError)
 
-        if self.ouu: 
-
-            conlist = []
-            cons = self.get_constraints()
-            for c in cons:
-               conlist.extend(cons[c])
-            resline = self.input.responses[0].split()
-            resline[0] = 'response_functions'
-            #resline[2] = str( 1 )
-            resline[2] = str( 1 + len(conlist) )
-
-            self.input.responses = [" id_responses 'f2r'"] + ['\n'.join(resline)] + ['\n'] + ['\n'.join(['no_gradients', 'no_hessians'])] + ["\nresponses\n  id_responses 'f1r'"] + self.input.responses
-
         for i, line in enumerate(self.input.environment):
             if 'tabular_graphics_data' in line:
                 if not self.tabular_graphics_data:
@@ -177,6 +164,7 @@ class DakotaBase(Driver):
         """
         cv = kwargs['cv']
         asv = kwargs['asv']
+        dvv = kwargs['dvv']
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
@@ -237,7 +225,35 @@ class DakotaBase(Driver):
                fns.extend([val])
             if asv[i] & 2:
             #val = expr.evaluate_gradient(self.parent)
-               fnGrads.extend([val])
+               objs = self.get_objectives().keys()
+               print '**'
+               gvars = [] # we need to strip the descriptors of the [n] index
+               gindexes = {} # then keep only the indexes of interest for each desvar
+               seen = set()
+               vars_for_grads = kwargs['av_labels']
+               for var in vars_for_grads:
+                   if var in self.root.unknowns._dat.keys(): gvars.append(var)
+                   else:
+                       vname = re.findall("(.*)\[(.*)\]", var)[0][0]
+                       if vname not in self.root.unknowns._dat.keys(): 
+                           raise ValueError("%s not in desvars"%vname)
+                       if vname not in seen:
+                           seen.add(vname)
+                           gvars.append(vname)
+                       ind = int(re.findall("(.*)\[(.*)\]", var)[0][1])
+                       if vname not in gindexes:
+                           gindexes[vname] = [ind]
+                       else: gindexes[vname].append(ind)
+
+               # only supporting one objective for now. I'll have to find out more about 
+               # the ASV structure before continuing.
+               for gvar in gvars:
+                   grad = self._prob.calc_gradient([gvar], self.get_objectives().keys())[0]
+                   for ind in gindexes[gvar]:
+                       fnGrads.append(grad[ind])
+                   #print 'hey. grad is ', grad ; quit()
+               #for lab in kwargs['av_labels']:
+                  #fnGrads.extend([val])
             #fnGrads.append([val])
             # self.raise_exception('Gradients not supported yet',
             #                      NotImplementedError)
@@ -474,6 +490,7 @@ class DakotaBase(Driver):
     def run(self, problem):
         """ Write DAKOTA input and run. """
         self.configure_input(problem) 
+        self._prob = problem
         #if not self.configured: self.configure_input(problem) # this limits configuration to one time
         self.run_dakota()
 

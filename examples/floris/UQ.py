@@ -96,7 +96,7 @@ if __name__ == "__main__":
     prob.driver = pydakdriver()
     prob.driver.stdout = 'dakota.out'
 
-    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':1000, 'sample_type':'lhs'})
+    prob.driver.add_method(response_type='r', model='single', method='sampling', method_options = {'samples':100, 'sample_type':'lhs'})
     #prob.driver.add_method(response_type='r', model='single', method='stoch_collocation', method_options = {'sparse_grid_level_sequence':1})
     #prob.driver.add_method(response_type='r', model='single', method='polynomial_chaos', method_options = {'sparse_grid_level_sequence':3})
 
