@@ -251,6 +251,7 @@ class DakotaBase(Driver):
                    grad = self._prob.calc_gradient([gvar], self.get_objectives().keys())[0]
                    for ind in gindexes[gvar]:
                        fnGrads.append(grad[ind])
+               fnGrads = np.array([fnGrads])
                    #print 'hey. grad is ', grad ; quit()
                #for lab in kwargs['av_labels']:
                   #fnGrads.extend([val])
