@@ -226,10 +226,13 @@ class DakotaBase(Driver):
             if asv[i] & 2:
             #val = expr.evaluate_gradient(self.parent)
                objs = self.get_objectives().keys()
+               print self.get_desvars() 
                print '**'
-               gvars = [] # we need to strip the descriptors of the [n] index
+               gvars = []
+               gvars_list = [] # we need to strip the descriptors of the [n] index
                gindexes = {} # then keep only the indexes of interest for each desvar
                seen = set()
+               print kwargs['av_labels']  
                vars_for_grads = kwargs['av_labels']
                for var in vars_for_grads:
                    if var in self.root.unknowns._dat.keys(): gvars.append(var)
@@ -239,7 +242,7 @@ class DakotaBase(Driver):
                            raise ValueError("%s not in desvars"%vname)
                        if vname not in seen:
                            seen.add(vname)
-                           gvars.append(vname)
+                           gvars_list.append(vname)
                        ind = int(re.findall("(.*)\[(.*)\]", var)[0][1])
                        if vname not in gindexes:
                            gindexes[vname] = [ind]
@@ -247,10 +250,16 @@ class DakotaBase(Driver):
 
                # only supporting one objective for now. I'll have to find out more about 
                # the ASV structure before continuing.
-               for gvar in gvars:
+               for gvar in gvars_list:
+                   print gvars_list
+                   print 'gvar ', gvar
                    grad = self._prob.calc_gradient([gvar], self.get_objectives().keys())[0]
                    for ind in gindexes[gvar]:
+                       print '  index ', ind
                        fnGrads.append(grad[ind])
+               for gvar in gvars:
+                   grad = self._prob.calc_gradient([gvar], self.get_objectives().keys())[0]
+                   fnGrads.extend(grad)
                fnGrads = np.array([fnGrads])
                    #print 'hey. grad is ', grad ; quit()
                #for lab in kwargs['av_labels']:
@@ -620,6 +629,7 @@ class pydakdriver(DakotaBase):
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
         if comm: self.mpi_comm = comm
+        else: self.mpi_comm = None
         self.input.uncertain_variables = []
         self.input.state_variables = []
         self.methods = []
