@@ -409,6 +409,9 @@ class DakotaBase(Driver):
         for i in range(len(self.input.responses)):
             if i !=0: self.input.variables.append('\nvariables\n')
             self.input.variables.append("id_variables = 'vars%d'"%(i+1))
+            if 'variable_options' in self.input.responses[i]:
+               self.input.variables.append(self.input.responses[i]['variable_options'])
+               del self.input.responses[i]['variable_options']
             if 'var_types' not in self.input.responses[i]:
                if 'objective_functions' in self.input.responses[i]:
                    self.input.variables.append("\n".join(self.input.reg_variables))
@@ -689,7 +692,7 @@ class pydakdriver(DakotaBase):
     # specifying secondary_variable_mapping as '' in model_options defgaults to mapping continous_design to associated uncertain or state variables
 
     def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None, response_options = {}, 
-                   response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None, variable_types=[]):
+                   response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None, variable_types=[], variable_options=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
         self.input.responses.append(collections.OrderedDict())
@@ -746,6 +749,7 @@ class pydakdriver(DakotaBase):
         else: raise ValueError("Gradient specification '%s' is not 'analytic' or 'numerical'"%gradients)
         if not hessians:  self.input.responses[-1]["no_hessians"] = ''
         if variable_types: self.input.responses[-1]['var_types'] = variable_types # we will translate this to the variables section in configure_input
+        if variable_options: self.input.responses[-1]['variable_options'] = variable_options
     def analytical_gradients(self):
          self.interval_type = 'forward'
          for key in self.input.responses:
