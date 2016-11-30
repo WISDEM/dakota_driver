@@ -175,25 +175,20 @@ class DakotaBase(Driver):
         ========== ==============================================
 
         """
+        # Get info from DAKOTA's call
         cv = kwargs['cv']
         asv = kwargs['asv']
-        #self._logger.debug('cv %s', cv)
-        #self._logger.debug('asv %s', asv)
 
+        # dvlist is a list of uncertain variable descriptors
         dvlist = [s for s in self.special_distribution_variables if s not in self.array_desvars]
-        if True: #self.array_desvars:
-            for i, var  in enumerate(dvlist + self.array_desvars):
-                if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
-                elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
-                    self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
-        else:
-            dvl = dvlist + self._desvars.keys() +  self.special_distribution_variables
-            #dvl = dvlist + self._desvars.keys() 
-            for i  in range(len(cv)):
-                if dvl[i] in self.root.unknowns._dat.keys(): self.set_desvar(dvl[i], cv[i])
-                #self.set_desvar(dvl[i], cv[i])
-                elif re.findall("(.*)\[(.*)\]", dvl[i])[0][0] in self.root.unknowns._dat.keys(): 
-                    self.set_desvar(re.findall("(.*)\[(.*)\]", dvl[i])[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", dvl[i])[0][1])])
+
+        # set all the design and uncertain variables DAKOTA sent.
+        for i, var  in enumerate(dvlist + self.array_desvars):
+            if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
+            elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
+                self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
+
+        # Evaluate the objective function
         system = self.root
         metadata = self.metadata  = create_local_meta(None, 'pydakrun%d'%world.Get_rank())
         system.ln_solver.local_meta = metadata
@@ -201,54 +196,25 @@ class DakotaBase(Driver):
         update_local_meta(metadata, (self.iter_count,))
         self.root.solve_nonlinear()
 
-            #system.solve_nonlinear(metadata=metadata)
-        #self.recorders.record_iteration(system, metadata)
-
-        #expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
-        #cons = self.get_constraints()
-        #for c in cons:
-        #       #expressions.append(-1*c)
-        #       expressions.append(-1*self.get_constraints()[con])
-
-        expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
+        # Get response values
+        expressions = self.get_objectives().values()[0].tolist()
         for con in self.get_constraints().values():
             for c in con:
                expressions.append(-1*c)
 
-        #if hasattr(self, 'get_eq_constraints'):
-        #    expressions.extend(self.get_eq_constraints().values()) # revisit - won't work with ordereddict
-        #if hasattr(self, 'get_ineq_constraints'):
-        #    expressions.extend(self.get_ineq_constraints().values())
-
-        fns = []
-        fnGrads = []
-        #print 'ASV: ', asv
-        #print 'expressions: ',expressions
-
+        fns = [] # Objective and constraint repsonses
+        fnGrads = [] # objective and constraint gradients
         for i in range(len(asv)):
-        #for i, val in enumerate(expressions.values()):
             val = expressions[i]
-
-            #fns.extend([val])
-            #if self.ouu:
-            #    fns.extend([a for a in expressions])
-            #else:
             if asv[i] & 1 or asv[i]==0:
                fns.extend([val])
             if asv[i] & 2:
-            #val = expr.evaluate_gradient(self.parent)
                fnGrads.extend([val])
-            #fnGrads.append([val])
-            # self.raise_exception('Gradients not supported yet',
-            #                      NotImplementedError)
             if asv[i] & 4:
                self.raise_exception('Hessians not supported yet',
                                      NotImplementedError)
 
         retval = dict(fns=array(fns), fnGrads = array(fnGrads))
-       # print 'asv was ',asv
-       # print 'returning ',retval
-        #self._logger.debug('returning %s', retval)
         return retval
 
     # We fully configure the input just before running the analysis as the user is liable to set
