@@ -79,7 +79,7 @@ class DakotaBase(Driver):
         if not objectives:
             self.raise_exception('No objectives, run aborted', ValueError)
 
-    def run_dakota(self, other_model=None):
+    def run_dakota(self):
         """
         Call DAKOTA, providing self as data, after enabling or disabling
         tabular graphics data in the ``environment`` section.
@@ -108,7 +108,7 @@ class DakotaBase(Driver):
                 self.input.environment.append('tabular_graphics_data')
 
         infile = self.name+ '.in'
-        self.input.write_input(infile, data=self, other_data=other_model)
+        self.input.write_input(infile, data=self, other_data=self.other_model)
         from openmdao.core.mpi_wrap import MPI
         if MPI:
             if self.mpi_comm:
@@ -168,7 +168,7 @@ class DakotaBase(Driver):
         #self._logger.debug('asv %s', asv)
 
         dvlist = [s for s in self.special_distribution_variables if s not in self.array_desvars]
-        if True: #self.array_desvars:
+        if False: #self.array_desvars:
             for i, var  in enumerate(dvlist + self.array_desvars):
                 if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
                 elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
@@ -499,12 +499,12 @@ class DakotaBase(Driver):
         self.configured = 1
 
     # This is the entry point to initialize the analysis run
-    def run(self, problem, other_model=None):
+    def run(self, problem):
         """ Write DAKOTA input and run. """
         self.configure_input(problem) 
         self._prob = problem
         #if not self.configured: self.configure_input(problem) # this limits configuration to one time
-        self.run_dakota(other_model=other_model)
+        self.run_dakota()
 
 # ---------------------------  special distribution magic ---------------------- #
  
@@ -627,6 +627,7 @@ class pydakdriver(DakotaBase):
     #implements(IOptimizer) # Not sure what this does
 
     def __init__(self, name=None, comm=None):
+        self.other_model = None
         super(pydakdriver, self).__init__()
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
