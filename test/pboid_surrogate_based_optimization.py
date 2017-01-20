@@ -55,9 +55,9 @@ drives = pydakdriver(name = 'top.driver')
 #drives.Optimization(opt_type='conmin', ouu=1)
 
 # surrogate optimization
-drives.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':''}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
-drives.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':9}, model_pointer=None, variables_pointer = "vars1")
-drives.add_method(method='conmin frcg', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "vars1")
+#drives.add_method('surrogate_based_local', response_type='o', gradients='numerical', method_options = {'approx_method_pointer':"'NLP'", 'trust_region':''}, model='surrogate', model_options = {'global\n correction additive zeroth_order\npolynomial quadratic':''}, dace_method_pointer="'meth2'", variables_pointer = "vars1")
+#drives.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':9}, model_pointer=None, variables_pointer = "vars1")
+drives.add_method(method='conmin frcg', gradients='analytic')
 
 #drives.add_method(method='conmin frcg', gradients='analytical')
 
