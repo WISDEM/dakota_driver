@@ -425,6 +425,9 @@ class DakotaBase(Driver):
                      self.input.variables.append("\n".join(self.input.reg_variables))
                    elif vartype=='state':
                      self.input.variables.append("\n".join(self.input.state_variables))
+                   elif vartype=='custom':
+                     if self.custom_variables_blocks[i]: self.input.variables.append("\n".join(self.custom_variables_blocks[i]))
+                     else: raise ValueError("variable_block not specified but custom variables requested")
                    else: raise ValueError("%s variable type is not supported"%vartype)
                del self.input.responses[i]['var_types']
                        
@@ -628,6 +631,7 @@ class pydakdriver(DakotaBase):
 
     def __init__(self, name=None, comm=None):
         self.other_model = None
+        self.custom_variables_blocks = []
         super(pydakdriver, self).__init__()
         #self.input.method = collections.OrderedDict()
         #self.input.responses = collections.OrderedDict()
@@ -691,13 +695,14 @@ class pydakdriver(DakotaBase):
     # -----
     # specifying secondary_variable_mapping as '' in model_options defgaults to mapping continous_design to associated uncertain or state variables
 
-    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None, response_options = {}, 
+    def add_method(self, method='conmin frcg', method_options={}, model='single', model_options={}, uq_responses=None, variable_mapping=None, variables_pointer=1, responses_pointer=1, model_pointer=1, method_id = None, dace_method_pointer=None, response_options = {}, variable_block=None,
                    response_type='o', gradients=False, hessians=False, n_objectives = 1, obj_mult=None, variable_types=[], variable_options=None):
         self.input.method.append(collections.OrderedDict())
         self.input.model.append(collections.OrderedDict())
         self.input.responses.append(collections.OrderedDict())
 
         # method
+        self.custom_variables_blocks.append( variable_block)
         if len(self.input.method) != 1: self.input.method[-1]['method'] = ''
         if type(model_pointer)=='str': self.input.method[-1]['model_pointer'] = "'%s'"%model_pointer
         elif model_pointer: self.input.method[-1]['model_pointer'] = "'mod%d'"%len(self.input.model)
