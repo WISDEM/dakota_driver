@@ -164,14 +164,18 @@ class DakotaBase(Driver):
         cv = kwargs['cv']
         asv = kwargs['asv']
         dvv = kwargs['dvv']
+        av_labels = kwargs['av_labels']
+        #print 'av_labs are ',av_labels , ' and cv is ', cv; quit()
         #self._logger.debug('cv %s', cv)
         #self._logger.debug('asv %s', asv)
 
         dvlist = [s for s in self.special_distribution_variables if s not in self.array_desvars]
-        if False: #self.array_desvars:
-            for i, var  in enumerate(dvlist + self.array_desvars):
+        if True: #self.array_desvars:
+            for i, var  in enumerate(av_labels):
+            #for i, var  in enumerate(dvlist + self.array_desvars):
                 if var in self.root.unknowns._dat.keys(): self.set_desvar(var, cv[i])
                 elif re.findall("(.*)\[(.*)\]", var)[0][0] in self.root.unknowns._dat.keys(): 
+                    #print 'setting ',re.findall("(.*)\[(.*)\]", var)[0][0], int(re.findall("(.*)\[(.*)\]", var)[0][1]), ' as ', cv[i]
                     self.set_desvar(re.findall("(.*)\[(.*)\]", var)[0][0], cv[i], index=[int(re.findall("(.*)\[(.*)\]", var)[0][1])])
         else:
             dvl = dvlist + self._desvars.keys() +  self.special_distribution_variables
