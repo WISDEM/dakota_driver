@@ -201,7 +201,10 @@ class DakotaBase(Driver):
         #       #expressions.append(-1*c)
         #       expressions.append(-1*self.get_constraints()[con])
 
-        expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
+        expressions = []
+        #expressions = self.get_objectives().values()[0].tolist()#.update(self.get_constraints())
+        for key in self.get_objectives():
+           expressions += list(self.get_objectives()[key])
         for con in self.get_constraints().values():
             for c in con:
                expressions.append(-1*c)
