@@ -472,9 +472,9 @@ class DakotaBase(Driver):
           for key in self.input.model[i]:
                 temp_list.append("%s  %s"%(key, self.input.model[i][key]))
                 if key == 'nested':
-                        vect = [0] *( self.input.n_objectives + len(cons))
+                        vect = [0] *( self.input.n_objectives[i] + len(cons))
                         maps = []
-                        for j in range(self.input.n_objectives):
+                        for j in range(self.input.n_objectives[i]):
                             s = vect
                             s[j] = 1
                             maps.append(s)
@@ -498,7 +498,7 @@ class DakotaBase(Driver):
             if 'objective_functions' in self.input.responses[i]:
                 self.input.responses[i]['nonlinear_inequality_constraints'] = len(cons)
             if 'response_functions' in self.input.responses[i]:
-                self.input.responses[i]["response_functions"] = self.input.n_objectives + len(cons)
+                self.input.responses[i]["response_functions"] = self.input.n_objectives[i] + len(cons)
             for key in self.input.responses[i]:
                 #temp_list.append(key)
                 if self.input.responses[i][key] or self.input.responses[i][key]==0:
@@ -649,6 +649,7 @@ class pydakdriver(DakotaBase):
         self.methods = []
         self.input.model = []
         self.input.reg_variables = []
+        self.input.n_objectives = []
 
         # default definitions for set_variables
         self.ouu = False
@@ -740,7 +741,7 @@ class pydakdriver(DakotaBase):
         if model == 'surrogate':
             #del self.input.model[-1]['variables_pointer']
             if dace_method_pointer: self.input.model[-1]["dace_method_pointer"] = "'%s'"%dace_method_pointer
-        self.input.n_objectives = n_objectives
+        self.input.n_objectives.append(n_objectives)
 
         # responses
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
@@ -748,7 +749,7 @@ class pydakdriver(DakotaBase):
         if response_type=='o':
             self.input.responses[-1]["objective_functions"] = 1 if not uq_responses else uq_responses
         elif response_type=='r':
-            self.input.responses[-1]["response_functions"] = self.input.n_objectives 
+            self.input.responses[-1]["response_functions"] = self.input.n_objectives[-1]
         for r in response_options: self.input.responses[-1][r] = response_options[r]
         if not gradients: self.input.responses[-1]["no_gradients"] = ''
         elif gradients == 'analytic':
