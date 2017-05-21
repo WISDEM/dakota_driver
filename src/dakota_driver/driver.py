@@ -771,7 +771,7 @@ class pydakdriver(DakotaBase):
         if len(self.input.method) != 1: self.input.responses[-1]["responses"]=''
         self.input.responses[-1]["id_responses"] = "'resp%d'"%len(self.input.model)
         if response_type=='o':
-            self.input.responses[-1]["objective_functions"] = 1 if not uq_responses else uq_responses
+            self.input.responses[-1]["objective_functions"] = self.input.n_objectives[-1] if not uq_responses else uq_responses
         elif response_type=='r':
             self.input.responses[-1]["response_functions"] = self.input.n_objectives[-1]
         for r in response_options: self.input.responses[-1][r] = response_options[r]
