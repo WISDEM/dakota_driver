@@ -384,8 +384,8 @@ class DakotaBase(Driver):
             if var in parameters: self.remove_parameter(var)
             if ']' in var:
                if int(re.findall("(.*)\[(.*)\]", var)[0][1])==0 and re.findall("(.*)\[(.*)\]", var)[0][0] not in self._desvars.keys():
-                   self.add_desvar(re.findall("(.*)\[(.*)\]", var)[0][0])
-            else: self.add_desvar(var)
+                   self.add_parameter(re.findall("(.*)\[(.*)\]", var)[0][0])
+            else: self.add_parameter(var, low=-99999999., high=99999999.)
         if self.normal_descriptors:
             # print(self.normal_means) ; quit()
             self.input.uncertain_variables.extend([
