@@ -59,7 +59,7 @@ drives = pydakdriver(name = 'top.driver')
 #drives.add_method(response_type='r', model='single', method='sampling', method_options = {'sample_type':'lhs','samples':900}, model_pointer=None, variables_pointer = "'vars1'")
 #drives.add_method(method='conmin frcg', responses_pointer = 0, model_pointer = 0, method_id="'NLP'", variables_pointer = "'vars1'")
 
-drives.add_method(method='conmin frcg', gradients='analytic')
+drives.add_method(method='conmin_frcg', gradients='analytic')
 
 #drives.add_method('soga', method_options = {'max_iterations':3, 'population_size':2}, model='nested')
 #drives.add_method(response_type='r', model='nested', method='sampling', method_options = {'samples':3})
