@@ -1,5 +1,4 @@
 # pydakdriver
-==========
 
 An OpenMDAO driver allowing access to DAKOTA.
 
@@ -25,7 +24,6 @@ import driver using:
     python tests/pydaktest.py 
 
 ## There are three main configuration types for pydakdriver - UQ, Parameter_study, and Optimization.
-==================================================================================================
 
 There is no default setting of the pydakdriver. One of these configuration functions must be called.
 
